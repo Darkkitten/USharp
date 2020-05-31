@@ -36,10 +36,19 @@ namespace UnrealEngine.Runtime
                 // IUserListEntry is an interface which implements another interface. Currently the code generator is broken for
                 // these situations (the Impl class doesn't include the entire interface chain). Blacklist this interface for now.
                 { "/Script/UMG.UserListEntry", ProjectDefinedType.Class },
+                { "/Script/UMG.UserListEntryLibrary", ProjectDefinedType.Class },
+                { "/Script/UMG.UserObjectListEntry", ProjectDefinedType.Class },
+                { "/Script/UMG.UserObjectListEntryLibrary", ProjectDefinedType.Class },
 
                 { "/Script/Engine.ETickingGroup", ProjectDefinedType.Enum },
                 { "/Script/Engine.TickFunction", ProjectDefinedType.Struct },
                 { "/Script/Engine.TickPrerequisite", ProjectDefinedType.BlittableStruct },
+
+                { "/Script/GameplayTasks.EGameplayTaskState", ProjectDefinedType.Enum },
+                { "/Script/GameplayTasks.ETaskResourceOverlapPolicy", ProjectDefinedType.Enum },
+                { "/Script/GameplayTasks.GameplayResourceSet", ProjectDefinedType.BlittableStruct },
+
+                { "/Script/OnlineSubsystemUtils.BlueprintSessionResult", ProjectDefinedType.Struct },
             };
 
             foreach (Type type in System.Reflection.Assembly.GetExecutingAssembly().GetTypes())
@@ -106,10 +115,19 @@ namespace UnrealEngine.Runtime
                 {
                     return false;
                 }
-                // EClassFlags.Transient - should we be checking this
             }
 
             return true;
+        }
+
+        private UClass GetActionFactoryClass(UClass unrealClass)
+        {
+            UClass actionFactoryClass = unrealClass;
+            while (actionFactoryClass != null && !actionFactoryClasses.Contains(actionFactoryClass))
+            {
+                actionFactoryClass = actionFactoryClass.GetSuperClass();
+            }
+            return actionFactoryClass;
         }
 
         /// <summary>
@@ -208,6 +226,13 @@ namespace UnrealEngine.Runtime
 
             // All UBlueprintFunctionLibrary classes are visible in blueprint even if marked as not visible
             if (unrealStruct.IsChildOf<UBlueprintFunctionLibrary>())
+            {
+                return true;
+            }
+
+            // Action classes are exposed to Blueprint as special nodes. We want the entire class.
+            UClass unrealClass = unrealStruct as UClass;
+            if (unrealClass != null && GetActionFactoryClass(unrealClass) != null)
             {
                 return true;
             }

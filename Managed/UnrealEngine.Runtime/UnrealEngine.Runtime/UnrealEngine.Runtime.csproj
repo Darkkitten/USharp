@@ -11,16 +11,18 @@
     <AssemblyName>UnrealEngine.Runtime</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\..\..\Binaries\Managed\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;WITH_EDITORONLY_DATA</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;WITH_EDITOR</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>7.3</LangVersion>
     <DocumentationFile>
     </DocumentationFile>
   </PropertyGroup>
@@ -32,6 +34,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -50,16 +53,33 @@
     <Compile Include="Core\FFeedbackContext.cs" />
     <Compile Include="Core\IPluginManager.cs" />
     <None Include="Internal\InjectedClasses\Engine\Pawn_Injected.cs" />
+    <Compile Include="Engine\Latent\FLatentActionInfo.cs" />
+    <Compile Include="Engine\Latent\FLatentActionManager.cs" />
+    <Compile Include="Engine\Latent\FLatentResponse.cs" />
+    <Compile Include="Engine\Latent\FUSharpLatentAction.cs" />
+    <None Include="Internal\InjectedClasses\Engine\Latent\UUSharpAsyncActionBase.cs" />
+    <Compile Include="Engine\Latent\ManagedLatentCallback.cs" />
+    <None Include="Internal\InjectedClasses\Engine\Latent\OnlineBlueprintCallProxyBase_Injected.cs" />
+    <None Include="Internal\InjectedClasses\Engine\Latent\UUSharpOnlineBlueprintCallProxyBase.cs" />
+    <None Include="Internal\InjectedClasses\Engine\Latent\BlueprintAsyncActionBase_Injected.cs" />
+    <Compile Include="Engine\Subsystems\FSubsystemCollection.cs" />
+    <Compile Include="Engine\Subsystems\UGameInstanceSubsystem.cs" />
+    <Compile Include="Engine\Subsystems\ULocalPlayerSubsystem.cs" />
+    <Compile Include="Engine\Subsystems\USubsystem.cs" />
+    <Compile Include="GameplayTasks\FGameplayResourceSet.cs" />
     <Compile Include="InputCore\EKeys.cs" />
     <Compile Include="InputCore\FKey.cs" />
     <None Include="Internal\InjectedClasses\Engine\ActorComponent_Injected.cs" />
     <None Include="Internal\InjectedClasses\Engine\Actor_Injected.cs" />
     <None Include="Internal\InjectedClasses\Engine\Engine_Injected.cs" />
     <None Include="Internal\InjectedClasses\Engine\GameplayStatics_Injected.cs" />
-    <None Include="Internal\InjectedClasses\Engine\WorldContextExtensions.cs" />
+    <None Include="Internal\InjectedClasses\Engine\PlayerController_Injected.cs" />
+    <None Include="Internal\InjectedClasses\Engine\Subsystems\ULocalPlayerSubsystem_Extensions.cs" />
+    <None Include="Internal\InjectedClasses\Engine\WorldContext_Extensions.cs" />
     <None Include="Internal\InjectedClasses\Engine\World_Injected.cs" />
     <None Include="Internal\InjectedClasses\Engine\InputComponent_Injected.cs" />
     <Compile Include="Internal\AppDomainDiagnostic.cs" />
+    <Compile Include="Internal\Bitflags.cs" />
     <Compile Include="Internal\CodeGenerator\CodeManagers\SimpleFileParserUtility.cs" />
     <Compile Include="Internal\CodeGenerator\ProjectProps.cs" />
     <Compile Include="Internal\CodeGenerator\TemplateProjectGenerator.cs" />
@@ -87,7 +107,7 @@
     <Compile Include="CoreUObject\FObjectInitializer.cs" />
     <Compile Include="CoreUObject\CollectionHelpers\FScriptArrayHelper.cs" />
     <Compile Include="CoreUObject\FReferenceFinder.cs" />
-    <Compile Include="CoreUObject\FScriptInterface.cs" />
+    <Compile Include="CoreUObject\TScriptInterface.cs" />
     <Compile Include="CoreUObject\CollectionHelpers\FScriptMapHelper.cs" />
     <Compile Include="CoreUObject\CollectionHelpers\FScriptSetHelper.cs" />
     <Compile Include="CoreUObject\FUObjectThreadContext.cs" />
@@ -181,17 +201,48 @@
     <None Include="Internal\InjectedClasses\Engine\EngineTypes_Injected.cs" />
     <None Include="Internal\InjectedClasses\Engine\SceneComponent_Injected.cs" />
     <None Include="Internal\InjectedClasses\Engine\MaterialInstanceDynamic_Injected.cs" />
+    <None Include="Internal\InjectedClasses\Engine\UserWidget_Injected.cs" />
+    <None Include="Internal\InjectedClasses\Engine\SpringArmComponent_Injected.cs" />
+    <None Include="Internal\InjectedClasses\GameplayTasks\GameplayTask_Injected.cs" />
+    <None Include="Internal\InjectedClasses\GameplayTasks\UUSharpGameplayTask.cs" />
+    <None Include="Internal\InjectedClasses\GameplayTasks\GameplayTaskOwnerInterface_Extensions.cs" />
+    <None Include="Internal\InjectedClasses\GameplayTasks\GameplayTasksEnums_Injected.cs" />
+    <None Include="Internal\InjectedClasses\Engine\Subsystems\UGameInstanceSubsystem_Extensions.cs" />
     <Compile Include="Internal\ManagedUnrealTypeInfo.Exception.cs" />
     <Compile Include="Internal\ManagedUnrealTypeInfo.Validation.cs" />
     <Compile Include="Internal\ManagedUnrealTypes.Builder.cs" />
     <Compile Include="Internal\ManagedUnrealTypes.MetaData.cs" />
     <Compile Include="Internal\ManagedUnrealVisibility.cs" />
     <Compile Include="Internal\NativeReflectionCached.cs" />
+    <Compile Include="Internal\Native\Internal\Native_UUSharpGameplayTask.cs" />
+    <Compile Include="Internal\Native\Internal\Native_UUSharpOnlineBlueprintCallProxyBase.cs" />
+    <Compile Include="Internal\Native\Native_APlayerController.cs" />
     <Compile Include="Internal\Native\Native_FFeedbackContext.cs" />
+    <Compile Include="Internal\Native\Native_FGameplayResourceSet.cs" />
+    <Compile Include="Internal\Native\Native_FLatentActionManager.cs" />
+    <Compile Include="Internal\Native\Native_FLatentResponse.cs" />
+    <Compile Include="Internal\Native\Native_FSubsystemCollection.cs" />
+    <Compile Include="Internal\Native\Native_FUSharpLatentAction.cs" />
+    <Compile Include="Internal\Native\Native_IGameplayTaskOwnerInterface.cs" />
+    <Compile Include="Internal\Native\Native_UActorComponent.cs" />
+    <Compile Include="Internal\Native\Native_UBlueprintAsyncActionBase.cs" />
     <Compile Include="Internal\Native\Native_UEngineTypes.cs" />
     <Compile Include="Internal\Native\Native_FPlatformMisc.cs" />
+    <Compile Include="Internal\Native\Native_UGameInstanceSubsystem.cs" />
+    <Compile Include="Internal\Native\Native_UGameplayTask.cs" />
+    <Compile Include="Internal\Native\Native_ULocalPlayerSubsystem.cs" />
     <Compile Include="Internal\Native\Native_UMaterialInstanceDynamic.cs" />
+    <Compile Include="Internal\Native\Native_UOnlineBlueprintCallProxyBase.cs" />
     <Compile Include="Internal\Native\Native_USceneComponent.cs" />
+    <Compile Include="Internal\Native\Internal\Native_USharpSettings.cs" />
+    <Compile Include="Internal\Native\Native_UUserWidget.cs" />
+    <Compile Include="Internal\Native\Internal\Native_UUSharpAsyncActionBase.cs" />
+    <Compile Include="Internal\Native\Online\Native_FOnlineSession.cs" />
+    <Compile Include="Internal\Native\Online\Native_FOnlineSessionSearchResult.cs" />
+    <Compile Include="Internal\Native\Online\Native_FOnlineSessionSetting.cs" />
+    <Compile Include="Internal\Native\Online\Native_FOnlineSessionSettings.cs" />
+    <Compile Include="Internal\Native\Online\Native_FSessionUtils.cs" />
+    <Compile Include="Internal\Native\Online\Native_FVariantData.cs" />
     <Compile Include="Internal\NonBlittableAttribute.cs" />
     <Compile Include="Internal\ScriptDisassembler.cs" />
     <Compile Include="Internal\StaticVar.cs" />
@@ -320,6 +371,7 @@
     <Compile Include="Internal\GCHelper.cs" />
     <Compile Include="Internal\UnrealBinaryHeap.cs" />
     <Compile Include="Internal\UnrealBinaryHeapEx.cs" />
+    <Compile Include="Internal\UnrealTypePrefix.cs" />
     <Compile Include="Internal\UnrealTypes.cs" />
     <Compile Include="Internal\UObjectDestroyedException.cs" />
     <Compile Include="Internal\USharpClass.cs" />
@@ -481,6 +533,13 @@
     <Compile Include="Internal\Native\Native_UUserDefinedStruct.cs" />
     <Compile Include="Internal\Native\Properties\Native_UNumericProperty.cs" />
     <Compile Include="Internal\Native\Native_UWorld.cs" />
+    <Compile Include="Online\OnlineSubsystem\EOnlineDataAdvertisementType.cs" />
+    <Compile Include="Online\OnlineSubsystem\EOnlineKeyValuePairDataType.cs" />
+    <Compile Include="Online\OnlineSubsystem\EOnlineSessionState.cs" />
+    <Compile Include="Online\OnlineSubsystem\FBlueprintSessionResult.cs" />
+    <Compile Include="Online\OnlineSubsystem\FOnlineSessionSetting.cs" />
+    <Compile Include="Online\OnlineSubsystem\FSessionUtils.cs" />
+    <Compile Include="Online\OnlineSubsystem\FVariantData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Internal\Extensions.cs" />
     <Compile Include="Core\TArrayUnsafe.cs" />

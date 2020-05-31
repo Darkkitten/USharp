@@ -78,6 +78,7 @@ namespace UnrealEngine.Runtime
     /// The function can be executed from the in-game console. Exec commands only function when declared within 
     /// certain classes.
     /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
     public class ExecAttribute : ManagedUnrealAttributeBase
     {
         public override void ProcessFunction(ManagedUnrealFunctionInfo functionInfo)
@@ -90,6 +91,7 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// This function is sealed and cannot be overridden in subclasses (only valid for BlueprintEvent functions).
     /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
     public class SealedEventAttribute : ManagedUnrealAttributeBase
     {
         public override void ProcessFunction(ManagedUnrealFunctionInfo functionInfo)
@@ -102,11 +104,24 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// This function is cosmetic and will not run on dedicated servers
     /// </summary>
-    public class BlueprintCosmetic : ManagedUnrealAttributeBase
+    [AttributeUsage(AttributeTargets.Method)]
+    public class BlueprintCosmeticAttribute : ManagedUnrealAttributeBase
     {
         public override void ProcessFunction(ManagedUnrealFunctionInfo functionInfo)
         {
             functionInfo.Flags |= EFunctionFlags.BlueprintCosmetic;
+        }
+    }
+
+    // meta=(ExpandEnumAsExecs="MyParamName")
+    /// <summary>
+    /// For BlueprintCallable functions indicates that an input exec pin should be created for each entry in the enum specified.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class ExpandEnumAsExecsAttribute : UMetaAttribute
+    {
+        public ExpandEnumAsExecsAttribute(string paramName) : base(MDFunc.ExpandEnumAsExecs, paramName)
+        {
         }
     }
 
@@ -155,7 +170,7 @@ namespace UnrealEngine.Runtime
     /// States that the function can be overridden in blueprint
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public class BlueprintEventAttribute : ManagedUnrealAttributeBase
+    public class BlueprintNativeEventAttribute : ManagedUnrealAttributeBase
     {
         public override void ProcessFunction(ManagedUnrealFunctionInfo functionInfo)
         {
@@ -169,13 +184,13 @@ namespace UnrealEngine.Runtime
     /// States that the function is to be implemented only in Blueprint (equivalent of UFUNCTION(BlueprintImplementableEvent)).
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public class BlueprintImplementedEventAttribute : ManagedUnrealAttributeBase
+    public class BlueprintImplementableEventAttribute : ManagedUnrealAttributeBase
     {
         public override void ProcessFunction(ManagedUnrealFunctionInfo functionInfo)
         {
             functionInfo.Flags |= EFunctionFlags.Event;
             functionInfo.Flags |= EFunctionFlags.BlueprintEvent;
-            functionInfo.IsBlueprintImplemented = true;
+            functionInfo.IsBlueprintImplementable = true;
         }
     }
     

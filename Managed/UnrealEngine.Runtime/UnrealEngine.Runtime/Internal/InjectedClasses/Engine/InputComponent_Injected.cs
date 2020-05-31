@@ -167,7 +167,7 @@ namespace UnrealEngine.Engine
         /// Binds a delegate function to an Action defined in the project settings.
         /// Returned reference is only guaranteed to be valid until another action is bound.
         /// </summary>
-        public FInputActionBindingHandle BindAction(string actionName, EInputEventType keyEvent, FInputActionHandler handler)
+        public FInputActionBindingHandle BindAction(string actionName, EInputEvent keyEvent, FInputActionHandler handler)
         {
             IntPtr functionAddress;
             UObject obj;
@@ -250,7 +250,7 @@ namespace UnrealEngine.Engine
         /// Binds a key event to a delegate function.
         /// Returned reference is only guaranteed to be valid until another input key is bound.
         /// </summary>
-        public FInputKeyBindingHandle BindKey(FKey key, EInputEventType keyEvent, FInputActionHandler handler)
+        public FInputKeyBindingHandle BindKey(FKey key, EInputEvent keyEvent, FInputActionHandler handler)
         {
             IntPtr functionAddress;
             UObject obj;
@@ -270,7 +270,7 @@ namespace UnrealEngine.Engine
         /// Binds a chord event to a delegate function.
         /// Returned reference is only guaranteed to be valid until another input key is bound.
         /// </summary>
-        public FInputKeyBindingHandle BindKey(FInputChord inputChord, EInputEventType keyEvent, FInputActionHandler handler)
+        public FInputKeyBindingHandle BindKey(FInputChord inputChord, EInputEvent keyEvent, FInputActionHandler handler)
         {
             IntPtr functionAddress;
             UObject obj;
@@ -288,7 +288,7 @@ namespace UnrealEngine.Engine
             return default(FInputKeyBindingHandle);
         }
 
-        public FInputTouchBindingHandle BindTouch(EInputEventType keyEvent, FInputTouchHandler handler)
+        public FInputTouchBindingHandle BindTouch(EInputEvent keyEvent, FInputTouchHandler handler)
         {
             IntPtr functionAddress;
             UObject obj;
@@ -366,9 +366,9 @@ namespace UnrealEngine.Engine
     public delegate void FInputGestureHandler(float value);
 
     /// <summary>
-    /// Base for the different binding types.
+    /// Binds a delegate to an action.
     /// </summary>
-    public struct FInputBindingHandle
+    public struct FInputActionBindingHandle
     {
         public IntPtr Address;
 
@@ -390,40 +390,12 @@ namespace UnrealEngine.Engine
             set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
-        public FInputBindingHandle(IntPtr address)
-        {
-            Address = address;
-        }
-
-        public static implicit operator IntPtr(FInputBindingHandle handle)
-        {
-            return handle.Address;
-        }
-
-        public static explicit operator FInputBindingHandle(IntPtr address)
-        {
-            return new FInputBindingHandle(address);
-        }
-    }
-
-    /// <summary>
-    /// Binds a delegate to an action.
-    /// </summary>
-    public struct FInputActionBindingHandle
-    {
-        public IntPtr Address;
-
-        public FInputBindingHandle Base
-        {
-            get { return (FInputBindingHandle)Address; }
-        }
-
         /// <summary>
         /// Key event to bind it to, e.g. pressed, released, double click
         /// </summary>
-        public EInputEventType KeyEvent
+        public EInputEvent KeyEvent
         {
-            get { return (EInputEventType)Native_FInputActionBinding.Get_KeyEvent(Address); }
+            get { return (EInputEvent)Native_FInputActionBinding.Get_KeyEvent(Address); }
             set { Native_FInputActionBinding.Set_KeyEvent(Address, (byte)value); }
         }
 
@@ -473,9 +445,22 @@ namespace UnrealEngine.Engine
     {
         public IntPtr Address;
 
-        public FInputBindingHandle Base
+        /// <summary>
+        /// Whether the binding should consume the input or allow it to pass to another component
+        /// </summary>
+        public bool ConsumeInput
         {
-            get { return (FInputBindingHandle)Address; }
+            get { return Native_FInputBinding.Get_bConsumeInput(Address); }
+            set { Native_FInputBinding.Set_bConsumeInput(Address, value); }
+        }
+
+        /// <summary>
+        /// Whether the binding should execute while paused
+        /// </summary>
+        public bool ExecuteWhenPaused
+        {
+            get { return Native_FInputBinding.Get_bExecuteWhenPaused(Address); }
+            set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
         /// <summary>
@@ -538,9 +523,22 @@ namespace UnrealEngine.Engine
     {
         public IntPtr Address;
 
-        public FInputBindingHandle Base
+        /// <summary>
+        /// Whether the binding should consume the input or allow it to pass to another component
+        /// </summary>
+        public bool ConsumeInput
         {
-            get { return (FInputBindingHandle)Address; }
+            get { return Native_FInputBinding.Get_bConsumeInput(Address); }
+            set { Native_FInputBinding.Set_bConsumeInput(Address, value); }
+        }
+
+        /// <summary>
+        /// Whether the binding should execute while paused
+        /// </summary>
+        public bool ExecuteWhenPaused
+        {
+            get { return Native_FInputBinding.Get_bExecuteWhenPaused(Address); }
+            set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
         /// <summary>
@@ -611,9 +609,22 @@ namespace UnrealEngine.Engine
     {
         public IntPtr Address;
 
-        public FInputBindingHandle Base
+        /// <summary>
+        /// Whether the binding should consume the input or allow it to pass to another component
+        /// </summary>
+        public bool ConsumeInput
         {
-            get { return (FInputBindingHandle)Address; }
+            get { return Native_FInputBinding.Get_bConsumeInput(Address); }
+            set { Native_FInputBinding.Set_bConsumeInput(Address, value); }
+        }
+
+        /// <summary>
+        /// Whether the binding should execute while paused
+        /// </summary>
+        public bool ExecuteWhenPaused
+        {
+            get { return Native_FInputBinding.Get_bExecuteWhenPaused(Address); }
+            set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
         /// <summary>
@@ -676,17 +687,30 @@ namespace UnrealEngine.Engine
     {
         public IntPtr Address;
 
-        public FInputBindingHandle Base
+        /// <summary>
+        /// Whether the binding should consume the input or allow it to pass to another component
+        /// </summary>
+        public bool ConsumeInput
         {
-            get { return (FInputBindingHandle)Address; }
+            get { return Native_FInputBinding.Get_bConsumeInput(Address); }
+            set { Native_FInputBinding.Set_bConsumeInput(Address, value); }
+        }
+
+        /// <summary>
+        /// Whether the binding should execute while paused
+        /// </summary>
+        public bool ExecuteWhenPaused
+        {
+            get { return Native_FInputBinding.Get_bExecuteWhenPaused(Address); }
+            set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
         /// <summary>
         /// Key event to bind it to (e.g. pressed, released, double click)
         /// </summary>
-        public EInputEventType KeyEvent
+        public EInputEvent KeyEvent
         {
-            get { return (EInputEventType)Native_FInputKeyBinding.Get_KeyEvent(Address); }
+            get { return (EInputEvent)Native_FInputKeyBinding.Get_KeyEvent(Address); }
             set { Native_FInputKeyBinding.Set_KeyEvent(Address, (byte)value); }
         }
 
@@ -746,17 +770,30 @@ namespace UnrealEngine.Engine
     {
         public IntPtr Address;
 
-        public FInputBindingHandle Base
+        /// <summary>
+        /// Whether the binding should consume the input or allow it to pass to another component
+        /// </summary>
+        public bool ConsumeInput
         {
-            get { return (FInputBindingHandle)Address; }
+            get { return Native_FInputBinding.Get_bConsumeInput(Address); }
+            set { Native_FInputBinding.Set_bConsumeInput(Address, value); }
+        }
+
+        /// <summary>
+        /// Whether the binding should execute while paused
+        /// </summary>
+        public bool ExecuteWhenPaused
+        {
+            get { return Native_FInputBinding.Get_bExecuteWhenPaused(Address); }
+            set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
         /// <summary>
         /// Key event to bind it to (e.g. pressed, released, double click)
         /// </summary>
-        public EInputEventType KeyEvent
+        public EInputEvent KeyEvent
         {
-            get { return (EInputEventType)Native_FInputTouchBinding.Get_KeyEvent(Address); }
+            get { return (EInputEvent)Native_FInputTouchBinding.Get_KeyEvent(Address); }
             set { Native_FInputTouchBinding.Set_KeyEvent(Address, (byte)value); }
         }
 
@@ -788,9 +825,22 @@ namespace UnrealEngine.Engine
     {
         public IntPtr Address;
 
-        public FInputBindingHandle Base
+        /// <summary>
+        /// Whether the binding should consume the input or allow it to pass to another component
+        /// </summary>
+        public bool ConsumeInput
         {
-            get { return (FInputBindingHandle)Address; }
+            get { return Native_FInputBinding.Get_bConsumeInput(Address); }
+            set { Native_FInputBinding.Set_bConsumeInput(Address, value); }
+        }
+
+        /// <summary>
+        /// Whether the binding should execute while paused
+        /// </summary>
+        public bool ExecuteWhenPaused
+        {
+            get { return Native_FInputBinding.Get_bExecuteWhenPaused(Address); }
+            set { Native_FInputBinding.Set_bExecuteWhenPaused(Address, value); }
         }
 
         /// <summary>

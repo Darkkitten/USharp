@@ -1,6 +1,7 @@
 #include "CSharpLoader.h"
 #include "USharpPCH.h"
 #include "ExportedFunctions/ExportedFunctions.h"
+#include "DotNetRuntimeFinder.h"
 
 #if PLATFORM_LINUX
 #include <signal.h>
@@ -191,6 +192,9 @@ CSharpLoader::CSharpLoader()
 {
 	coreCLRHandle = NULL;
 	monoDomain = NULL;
+#if PLATFORM_LINUX
+	bHasFreedSignals = false;
+#endif
 #if PLATFORM_WINDOWS
 	metaHost = NULL;
 	runtimeHost = NULL;
@@ -268,9 +272,29 @@ void CSharpLoader::SetupPaths()
 	
 	// Mono should be under "/Binaries/Managed/Runtimes/Mono/[PLATFORM]/bin/"
 	monoLibPaths.Add(FPaths::Combine(*ManagedBinDir, TEXT("Runtimes"), TEXT("Mono"), *GetPlatformString(), TEXT("bin")));
-
+	FString MonoInstallPath = FindMonoInstallPath();
+	if (!MonoInstallPath.IsEmpty() && FPaths::DirectoryExists(MonoInstallPath))
+	{
+		monoLibPaths.Add(MonoInstallPath);
+	}
+	
 	// CoreCLR should be under "/Binaries/Managed/Runtimes/CoreCLR/[PLATFORM]/"
 	coreCLRLibPaths.Add(FPaths::Combine(*ManagedBinDir, TEXT("Runtimes"), TEXT("CoreCLR"), *GetPlatformString()));
+	FString CoreCLRInstallPath = FindCoreCLRInstallPath();
+	if (!CoreCLRInstallPath.IsEmpty() && FPaths::DirectoryExists(CoreCLRInstallPath))
+	{
+		coreCLRLibPaths.Add(CoreCLRInstallPath);
+	}
+}
+
+// This is similar to FPaths::NormalizeFilename, but it normalizes based on the platform slash char
+void NormalizePlatformPath(FString& InPath)
+{
+#if PLATFORM_WINDOWS
+	InPath.ReplaceInline(TEXT("/"), TEXT("\\"), ESearchCase::CaseSensitive);
+#else
+	InPath.ReplaceInline(TEXT("\\"), TEXT("/"), ESearchCase::CaseSensitive);
+#endif
 }
 
 FString CSharpLoader::GetPlatformString()
@@ -504,25 +528,6 @@ bool CSharpLoader::LoadRuntimeMono()
 	}
 #endif
 
-#if PLATFORM_LINUX
-	// Free up a signals for mono (FUnixPlatformMisc::SetCrashHandler ignores all signals it doesn't use)
-	int32 freedSignals = 0;
-	const int32 requiredSignals = 3;// abort, suspend, restart
-	const int32 targetFlags = SA_SIGINFO | SA_RESTART | SA_ONSTACK;// Set by SetCrashHandler()
-	for (int i = SIGRTMAX - 1; i >= 0 && freedSignals < requiredSignals; --i)
-	{
-		struct sigaction sig;
-		sigaction(i, NULL, &sig);
-		if (sig.sa_handler == SIG_IGN && (sig.sa_flags & targetFlags) == targetFlags)
-		{
-			sig.sa_handler = SIG_DFL;
-			sigaction(i, &sig, NULL);
-			freedSignals++;
-		}
-	}
-	check(freedSignals == requiredSignals);
-#endif
-
 #ifdef MONO_VERBOSE_LOGGING
 	// mono_trace_init() doesn't seem to print anything on MacOS (regardless of environment variables)
 	//mono_trace_init();
@@ -541,6 +546,13 @@ bool CSharpLoader::LoadRuntimeMono()
 
 	FString assemblyDir = FPaths::Combine(*monoDirectory, TEXT(".."), TEXT("lib"));
 	FString configDir = FPaths::Combine(*monoDirectory, TEXT(".."), TEXT("etc"));
+#if PLATFORM_LINUX
+	// If this is from the install path then etc will be under the root /etc/ directory
+	if (!FPaths::FileExists(FPaths::Combine(*configDir, TEXT("mono"), TEXT("config"))))
+	{
+		configDir = FPaths::Combine(*monoDirectory, TEXT(".."), TEXT(".."), TEXT("etc"));
+	}
+#endif
 	mono_set_dirs(TCHAR_TO_ANSI(*assemblyDir), TCHAR_TO_ANSI(*configDir));
 #if UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
 	mono_debug_init(MONO_DEBUG_FORMAT_MONO);
@@ -651,6 +663,31 @@ bool CSharpLoader::LoadRuntimes(bool loaderEnabled)
 	{
 		return true;
 	}
+	
+#if PLATFORM_LINUX
+	// Free up a signals for mono (FUnixPlatformMisc::SetCrashHandler ignores all signals it doesn't use)
+	// We always want to do this even if not running mono as we invoke mono/msbuild from C# (which inherits
+	// the signals. UE4 frees the signals when starting mono processes (FUnixPlatformProcess::CreateProc)).
+	if (!bHasFreedSignals)
+	{
+		int32 freedSignals = 0;
+		const int32 requiredSignals = 3;// abort, suspend, restart
+		const int32 targetFlags = SA_SIGINFO | SA_RESTART | SA_ONSTACK;// Set by SetCrashHandler()
+		for (int i = SIGRTMAX - 1; i >= 0 && freedSignals < requiredSignals; --i)
+		{
+			struct sigaction sig;
+			sigaction(i, NULL, &sig);
+			if (sig.sa_handler == SIG_IGN && (sig.sa_flags & targetFlags) == targetFlags)
+			{
+				sig.sa_handler = SIG_DFL;
+				sigaction(i, &sig, NULL);
+				freedSignals++;
+			}
+		}
+		check(freedSignals == requiredSignals);
+		bHasFreedSignals = true;
+	}
+#endif
 
 #if PLATFORM_WINDOWS
 	if ((runtimeState.InitializedRuntimes == EDotNetRuntime::None || loaderEnabled) &&
@@ -796,16 +833,19 @@ bool CSharpLoader::Load(FString assemblyPath, FString customArgs, FString loader
 		// Use both the CoreCLR directory and the target assembly directory for APP_PATHS so that
 		// it can resolve CoreCLR system assemblies
 		FString appPaths = coreCLRDir + fileSplitter + assemblyDir;
+		NormalizePlatformPath(appPaths);
 		auto appPathsCStr = StringCast<ANSICHAR>(*appPaths);
 
-		// I'm not sure if this should be the path of the target assembly or the path of the running exe
-		// It doesn't seem to matter what you use here.
-		FString exePath = fullAssemblyPath;
+		// Get the full path of the current exe
+		FString exePath = FString(FPlatformProcess::BaseDir()) / FString(FPlatformProcess::ExecutableName(false));
+		//FString exePath = FPlatformProcess::ExecutablePath();// For UE_4.23
+		NormalizePlatformPath(exePath);
 		auto exePathCStr = StringCast<ANSICHAR>(*exePath);
 
 		// We may need to trust more assemblies, for now just add our target assembly
 		FString trustedAssemblies = fullAssemblyPath;
-		auto trustedAssembliesCtr = StringCast<ANSICHAR>(*trustedAssemblies);
+		NormalizePlatformPath(trustedAssemblies);
+		auto trustedAssembliesCStr = StringCast<ANSICHAR>(*trustedAssemblies);
 
 		// FString dllPath = GetCoreCLRDllPath();
 		const char* propertyKeys[] =
@@ -816,7 +856,7 @@ bool CSharpLoader::Load(FString assemblyPath, FString customArgs, FString loader
 		const char* propertyValues[] =
 		{
 			// TRUSTED_PLATFORM_ASSEMBLIES
-			trustedAssembliesCtr.Get(),
+			trustedAssembliesCStr.Get(),
 			// APP_PATHS
 			appPathsCStr.Get()
 		};
@@ -834,7 +874,9 @@ bool CSharpLoader::Load(FString assemblyPath, FString customArgs, FString loader
 
 		if (FAILED(hr))
 		{
-			LogLoaderError(FString::Printf(TEXT("coreclr_initialize failed. ErrorCode: 0x%08x (%u)"), hr, hr));
+			LogLoaderError(FString::Printf(TEXT("coreclr_initialize failed. ErrorCode: 0x%08x (%u)\n\n"
+				"TRUSTED_PLATFORM_ASSEMBLIES: %s\n\nAPP_PATHS: %s\n\nExe path: %s"),
+				hr, hr, *trustedAssemblies, *appPaths, *exePath));
 		}
 		else
 		{

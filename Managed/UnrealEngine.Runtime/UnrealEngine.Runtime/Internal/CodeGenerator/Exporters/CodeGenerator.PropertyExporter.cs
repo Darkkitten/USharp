@@ -37,6 +37,9 @@ namespace UnrealEngine.Runtime
             "/Script/Engine.HitResult:Component",
             "/Script/Engine.HitResult:BoneName",
             "/Script/Engine.HitResult:MyBoneName",
+
+            "/Script/Engine.GameModeBase:GameSession",
+            "/Script/Engine.GameModeBase:GameState",
         };
         private static HashSet<string> forceHideProperties = new HashSet<string>();
 
@@ -92,9 +95,9 @@ namespace UnrealEngine.Runtime
             if ((// private (there is little point in allowing private code gen so make this protected instead?)
                 (property.HasAnyPropertyFlags(EPropertyFlags.DisableEditOnInstance) && !property.GetBoolMetaData(MDProp.AllowPrivateAccess)) ||
                 // protected
-                (!isOwnerStruct && property.HasAnyPropertyFlags(EPropertyFlags.NativeAccessSpecifierProtected | EPropertyFlags.Protected)))
+                (property.HasAnyPropertyFlags(EPropertyFlags.NativeAccessSpecifierProtected | EPropertyFlags.Protected)))
                 // If this is being force exported make it public instead of protected
-                && !forceExportProperties.Contains(property.GetPathName()))
+                && !isOwnerStruct && !forceExportProperties.Contains(property.GetPathName()))
             {
                 modifiers.Append("protected");
             }

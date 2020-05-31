@@ -161,21 +161,25 @@ namespace UnrealEngine.Runtime
         }
     }
 
-    // We need the enum prefix here?
-    ///// <summary>
-    ///// Metadata that associates a bitmask property with a bitflag enum.
-    ///// </summary>
-    //[AttributeUsage(AttributeTargets.Enum)]
-    //public class BitmaskEnumAttribute : UMetaAttribute
-    //{
-    //    public BitmaskEnumAttribute(Type enumType) 
-    //        : base(MDEnum.BitmaskEnum, enumType.Name)
-    //    {
-    //    }
-    //
-    //    public BitmaskEnumAttribute(string enumTypeName) 
-    //        : base(MDEnum.BitmaskEnum, enumTypeName)
-    //    {
-    //    }
-    //}
+    /// <summary>
+    /// Indicates a latent action. Latent actions have one parameter of type FLatentActionInfo, and this parameter is named by the LatentInfo specifier.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class LatentAttribute : UMetaAttribute
+    {
+        public LatentAttribute() : base(MDFunc.Latent, true)
+        {
+        }
+    }
+
+    /// <summary>
+    /// For Latent BlueprintCallable functions indicates which parameter is the LatentInfo parameter.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class LatentInfoAttribute : UMetaAttribute
+    {
+        public LatentInfoAttribute(string paramName) : base(MDFunc.LatentInfo, paramName)
+        {
+        }
+    }
 }

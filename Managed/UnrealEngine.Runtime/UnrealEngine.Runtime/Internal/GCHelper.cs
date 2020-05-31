@@ -100,7 +100,7 @@ namespace UnrealEngine.Runtime
             UObjectRef objRef = References.Count > objectInternalIndex ? References[objectInternalIndex] : null;
             if (objRef == null)
             {
-                IntPtr gcHandlePtr = Add(native);
+                IntPtr gcHandlePtr = OnAdd(native);
                 if (gcHandlePtr != IntPtr.Zero)
                 {
                     GCHandle gcHandle = GCHandle.FromIntPtr(gcHandlePtr);
@@ -220,10 +220,10 @@ namespace UnrealEngine.Runtime
         {
             GCHandle gcHandle = GCHandle.FromIntPtr(gcHandlePtr);
             UObjectRef objRef = (UObjectRef)gcHandle.Target;
-            FMessage.Log("GC " + (objRef.Managed == null ? "null" : objRef.Managed.GetType().ToString()) + " (" + gcHandlePtr.ToString("X16") + ")");
+            //FMessage.Log("GC " + (objRef.Managed == null ? "null" : objRef.Managed.GetType().ToString()) + " (GCHandle: " + gcHandlePtr.ToString("X16") + " ptr: " + objRef.Native.ToString("X16") + ")");
+            objRef.Managed.OnDestroyedInternal();
             Coroutine.RemoveObjectByGC(objRef.Managed);
             Invoker.RemoveObjectByGC(objRef.Managed);
-            objRef.Managed.ReleaseInjectedInterfaces();
             objRef.Managed.objRef = null;// This will make UObject.IsDestroyed true
             objRef.Managed.Address = IntPtr.Zero;// Reset the address
 #if ARRAY_GC

@@ -54,6 +54,8 @@ namespace UnrealEngine.Runtime
         public static IntPtr USoftObjectProperty;
         public static IntPtr UDelegateProperty;
         public static IntPtr UMulticastDelegateProperty;
+        public static IntPtr UMulticastInlineDelegateProperty;
+        public static IntPtr UMulticastSparseDelegateProperty;
         public static IntPtr UArrayProperty;
         public static IntPtr UMapProperty;
         public static IntPtr USetProperty;
@@ -75,6 +77,12 @@ namespace UnrealEngine.Runtime
         public static IntPtr AActor;
         public static IntPtr APawn;
         public static IntPtr UActorComponent;
+        public static IntPtr APlayerController;
+
+        public static IntPtr UGameInstanceSubsystem;
+        public static IntPtr UEngineSubsystem;
+        public static IntPtr ULocalPlayerSubsystem;
+        public static IntPtr USubsystem;
 
         // USharp
         public static IntPtr USharpClass;
@@ -137,6 +145,8 @@ namespace UnrealEngine.Runtime
             USoftObjectProperty = Native_Classes.USoftObjectProperty();
             UDelegateProperty = Native_Classes.UDelegateProperty();
             UMulticastDelegateProperty = Native_Classes.UMulticastDelegateProperty();
+            UMulticastInlineDelegateProperty = Native_Classes.UMulticastInlineDelegateProperty();
+            UMulticastSparseDelegateProperty = Native_Classes.UMulticastSparseDelegateProperty();
             UArrayProperty = Native_Classes.UArrayProperty();
             UMapProperty = Native_Classes.UMapProperty();
             USetProperty = Native_Classes.USetProperty();
@@ -158,6 +168,12 @@ namespace UnrealEngine.Runtime
             AActor = Native_Classes.AActor();
             APawn = Native_Classes.APawn();
             UActorComponent = Native_Classes.UActorComponent();
+            APlayerController = Native_Classes.APlayerController();
+
+            UGameInstanceSubsystem = Native_Classes.UGameInstanceSubsystem();
+            UEngineSubsystem = Native_Classes.UEngineSubsystem();
+            ULocalPlayerSubsystem = Native_Classes.ULocalPlayerSubsystem();
+            USubsystem = Native_Classes.USubsystem();
 
             // USharp
             USharpClass = Native_Classes.USharpClass();

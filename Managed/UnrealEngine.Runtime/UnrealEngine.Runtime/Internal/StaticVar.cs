@@ -74,16 +74,43 @@ namespace UnrealEngine.Runtime
         protected Dictionary<IntPtr, T> values = new Dictionary<IntPtr, T>();
         protected int worldTypeFlags;
 
+        public GetDefaultValueHandler GetDefaultValue;
+        public delegate T GetDefaultValueHandler(UObject world);
+
         public WorldStaticVar()
         {
         }
 
-        public WorldStaticVar(params EWorldType[] worldTypes)
+        public WorldStaticVar(GetDefaultValueHandler getDefaultValue, params EWorldType[] worldTypes)
         {
+            GetDefaultValue = getDefaultValue;
             foreach (EWorldType worldType in worldTypes)
             {
                 worldTypeFlags |= (1 << (int)worldType);
             }
+
+            // Initialize the value for already created worlds
+            FWorldContext[] worldContexts = FWorldContext.GetWorldContexts();
+            foreach (FWorldContext worldContext in worldContexts)
+            {
+                if (worldContext.CurrentWorld != IntPtr.Zero)
+                {
+                    int worldType = (1 << (int)worldContext.WorldType);
+                    if ((worldTypeFlags & worldType) == worldType)
+                    {
+                        UObject world = GCHelper.Find(worldContext.CurrentWorld);
+                        if (world != null)
+                        {
+                            Set(world, GetDefaultValue(world));
+                        }
+                    }
+                }
+            }
+        }
+
+        public WorldStaticVar(params EWorldType[] worldTypes)
+            : this (null, worldTypes)
+        {
         }
 
         public virtual bool HasValue(UObject worldContextObject)
@@ -156,6 +183,14 @@ namespace UnrealEngine.Runtime
             return false;
         }
 
+        public override void OnWorldAdded(IntPtr world)
+        {
+            if (GetDefaultValue != null)
+            {
+                values[world] = GetDefaultValue(GCHelper.Find(world));
+            }
+        }
+
         public override void OnWorldDestroyed(IntPtr world)
         {
             values.Remove(world);
@@ -171,9 +206,40 @@ namespace UnrealEngine.Runtime
     {
         public T Value;
 
+        public GetDefaultValueHandler GetDefaultValue;
+        public delegate T GetDefaultValueHandler();
+
+        public GameStaticVar()
+        {
+        }
+
+        public GameStaticVar(GetDefaultValueHandler getDefaultValue)
+        {
+            GetDefaultValue = getDefaultValue;
+            if (GetDefaultValue != null)
+            {
+#if WITH_EDITOR
+                IntPtr pieWorldContext = Native_UEditorEngine.GetPIEWorldContext(FGlobals.GEditor);
+                if (pieWorldContext != IntPtr.Zero)
+                {
+                    Value = GetDefaultValue();
+                }
+#else
+                Value = GetDefaultValue();
+#endif
+            }
+        }
+
         public override void OnPIEBegin(bool simulating)
         {
-            Value = default(T);
+            if (GetDefaultValue != null)
+            {
+                Value = GetDefaultValue();
+            }
+            else
+            {
+                Value = default(T);
+            }
         }
 
         public override void OnPIEEnd(bool simulating)
@@ -192,10 +258,10 @@ namespace UnrealEngine.Runtime
         }
     }
 
-    /// <summary>
+    // This has no real purpose. This is essentially the same as using GameStaticVar<T>
+    /*/// <summary>
     /// A static variable which can have a unique value for each UGameInstance<para/>
     /// NOTE: The value will be reset on hotreload<para/>
-    /// NOTE: As each UGameInstance typically works with a single UWorld this is likely no different than using <see cref="WorldStaticVar{T}"/>
     /// </summary>
     /// <typeparam name="T">The type of the static variable</typeparam>
     public class GameInstanceStaticVar<T> : StaticVar
@@ -205,7 +271,7 @@ namespace UnrealEngine.Runtime
 
         private IntPtr GetDefaultWorld()
         {
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
             FWorldContext worldContext = new FWorldContext(Native_UEditorEngine.GetPIEWorldContext(FGlobals.GEditor));
             return worldContext.IsNull ? IntPtr.Zero : worldContext.CurrentWorld;
 #else
@@ -328,7 +394,7 @@ namespace UnrealEngine.Runtime
         {
             values.Remove(gameInstance);
         }
-    }
+    }*/
 
     public static class StaticVarManager
     {
@@ -378,7 +444,7 @@ namespace UnrealEngine.Runtime
             // TODO: Only call this on types which override this function
             foreach (StaticVar staticVar in Vars)
             {
-                staticVar.OnWorldDestroyed(world);
+                staticVar.OnWorldAdded(world);
             }
         }
 

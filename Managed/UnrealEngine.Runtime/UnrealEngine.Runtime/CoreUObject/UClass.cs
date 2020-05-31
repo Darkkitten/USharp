@@ -12,7 +12,7 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// An object class.
     /// </summary>
-    [UMetaPath("/Script/CoreUObject.Class", "CoreUObject", UnrealModuleType.Engine)]
+    [UClass(Flags = (ClassFlags)0x10400080), UMetaPath("/Script/CoreUObject.Class")]
     public class UClass : UStruct
     {
         internal class VTableOriginalFunc
@@ -85,7 +85,7 @@ namespace UnrealEngine.Runtime
             }
         }
 
-        static void ProcessLoadedObjects()
+        static void ProcessLoadedObjects(FName package, bool canProcessNewlyLoadedObjects)
         {
             lastModuleCount = FModuleManager.Get().GetModuleCount();
             LoadNative(false);
@@ -1219,9 +1219,9 @@ namespace UnrealEngine.Runtime
         /// </summary>
         /// <param name="inFunctionName">The name of the function to test</param>
         /// <returns>True if the specified function exists and is implemented in a blueprint generated class</returns>
-        public bool IsFunctionImplementedInBlueprint(FName inFunctionName)
+        public bool IsFunctionImplementedInScript(FName inFunctionName)
         {
-            return Native_UClass.IsFunctionImplementedInBlueprint(Address, ref inFunctionName);
+            return Native_UClass.IsFunctionImplementedInScript(Address, ref inFunctionName);
         }
 
         /// <summary>

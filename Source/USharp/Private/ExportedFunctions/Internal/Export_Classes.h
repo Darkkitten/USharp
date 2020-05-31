@@ -183,6 +183,16 @@ CSEXPORT UClass* CSCONV Export_Classes_UMulticastDelegateProperty()
 	return UMulticastDelegateProperty::StaticClass();
 }
 
+CSEXPORT UClass* CSCONV Export_Classes_UMulticastInlineDelegateProperty()
+{
+	return UMulticastInlineDelegateProperty::StaticClass();
+}
+
+CSEXPORT UClass* CSCONV Export_Classes_UMulticastSparseDelegateProperty()
+{
+	return UMulticastSparseDelegateProperty::StaticClass();
+}
+
 CSEXPORT UClass* CSCONV Export_Classes_UArrayProperty()
 {
 	return UArrayProperty::StaticClass();
@@ -273,6 +283,31 @@ CSEXPORT UClass* CSCONV Export_Classes_UActorComponent()
     return UActorComponent::StaticClass();
 }
 
+CSEXPORT UClass* CSCONV Export_Classes_APlayerController()
+{
+    return APlayerController::StaticClass();
+}
+
+CSEXPORT UClass* CSCONV Export_Classes_UGameInstanceSubsystem()
+{
+    return UGameInstanceSubsystem::StaticClass();
+}
+
+CSEXPORT UClass* CSCONV Export_Classes_UEngineSubsystem()
+{
+    return UEngineSubsystem::StaticClass();
+}
+
+CSEXPORT UClass* CSCONV Export_Classes_ULocalPlayerSubsystem()
+{
+    return ULocalPlayerSubsystem::StaticClass();
+}
+
+CSEXPORT UClass* CSCONV Export_Classes_USubsystem()
+{
+    return USubsystem::StaticClass();
+}
+
 CSEXPORT UClass* CSCONV Export_Classes_USharpClass()
 {
 	return USharpClass::StaticClass();
@@ -323,6 +358,8 @@ CSEXPORT void CSCONV Export_Classes(RegisterFunc registerFunc)
 	REGISTER_FUNC(Export_Classes_USoftObjectProperty);
 	REGISTER_FUNC(Export_Classes_UDelegateProperty);
 	REGISTER_FUNC(Export_Classes_UMulticastDelegateProperty);
+	REGISTER_FUNC(Export_Classes_UMulticastInlineDelegateProperty);
+	REGISTER_FUNC(Export_Classes_UMulticastSparseDelegateProperty);
 	REGISTER_FUNC(Export_Classes_UArrayProperty);
 	REGISTER_FUNC(Export_Classes_UMapProperty);
 	REGISTER_FUNC(Export_Classes_USetProperty);
@@ -343,7 +380,12 @@ CSEXPORT void CSCONV Export_Classes(RegisterFunc registerFunc)
 	REGISTER_FUNC(Export_Classes_AActor);
 	REGISTER_FUNC(Export_Classes_APawn);
 	REGISTER_FUNC(Export_Classes_UActorComponent);
+	REGISTER_FUNC(Export_Classes_APlayerController);
 
+	REGISTER_FUNC(Export_Classes_UGameInstanceSubsystem);
+    REGISTER_FUNC(Export_Classes_UEngineSubsystem);
+    REGISTER_FUNC(Export_Classes_ULocalPlayerSubsystem);
+    REGISTER_FUNC(Export_Classes_USubsystem);
 
 	// USharp
 	REGISTER_FUNC(Export_Classes_USharpClass);

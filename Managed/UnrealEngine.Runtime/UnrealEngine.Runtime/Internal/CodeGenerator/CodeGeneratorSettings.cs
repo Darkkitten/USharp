@@ -61,11 +61,6 @@ namespace UnrealEngine.Runtime
         public CodeCasing ParamCasing { get; set; }
 
         /// <summary>
-        /// Type prefix settings
-        /// </summary>
-        public TypePrefixes Prefixes { get; private set; }
-
-        /// <summary>
         /// Member category output on blueprint types
         /// </summary>
         public CodeMemberCategories BlueprintMemberCategories { get; set; }
@@ -295,7 +290,6 @@ namespace UnrealEngine.Runtime
 
         public CodeGeneratorSettings()
         {
-            Prefixes = new TypePrefixes();
             Namespaces = new ManagedNamespaces();
             FolderEmulation = new ManagedFolderEmulation();
             CollapsedMembers = new List<CollapsedMemberSettings>();
@@ -321,13 +315,6 @@ namespace UnrealEngine.Runtime
             DocUpdateParamCasing = true;
             DocTrimTrailingChars = true;
             DocUseCommonSummaryTextOffset = true;
-
-            Prefixes.Enum.Mode = TypePrefixMode.Enforce;
-            Prefixes.Generics.Mode = TypePrefixMode.Enforce;
-            Prefixes.Struct.Mode = TypePrefixMode.Enforce;
-            Prefixes.Actor.Mode = TypePrefixMode.Enforce;
-            Prefixes.Object.Mode = TypePrefixMode.Enforce;
-            Prefixes.Interface.Mode = TypePrefixMode.Enforce;
 
             BlueprintMemberCategories = CodeMemberCategories.SelectivePrefix;
 
@@ -562,6 +549,53 @@ namespace UnrealEngine.Runtime
             return Path.GetFileNameWithoutExtension(FPaths.ProjectFilePath);
         }
 
+        private string GetCodegenVersionFilePath(bool codeGenDir)
+        {
+            string codegenVersionFileName = "CodeGenerator.version";
+            if (codeGenDir)
+            {
+                return Path.Combine(GetManagedModulesDir(), codegenVersionFileName);
+            }
+            else
+            {
+                return Path.Combine(GetUSharpBaseDir(), "Managed", codegenVersionFileName);
+            }
+        }
+
+        public int GetCodeGeneratorVersion(bool codeGenDir)
+        {
+            string path = GetCodegenVersionFilePath(codeGenDir);
+            try
+            {
+                if (File.Exists(path))
+                {
+                    string[] lines = File.ReadAllLines(path);
+                    int version;
+                    if (lines.Length > 0 && int.TryParse(lines[0].Trim(), out version) && version > 0)
+                    {
+                        return version;
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return -1;
+        }
+
+        public void CopyCodeGeneratorVersionFile()
+        {
+            try
+            {
+                string src = GetCodegenVersionFilePath(false);
+                string dst = GetCodegenVersionFilePath(true);
+                File.Copy(src, dst, true);
+            }
+            catch
+            {
+            }
+        }
+
         /*public CollapsedFunctionSettings FindCollapsedFunctionSettings(string name)
         {
             foreach (CollapsedFunctionSettings collapsedFunctions in CollapsedFunctions)
@@ -698,77 +732,6 @@ namespace UnrealEngine.Runtime
             public bool GamePluginAssets { get; set; }
             public bool EngineAssets { get; set; }
             public bool EnginePluginAssets { get; set; }
-        }
-
-        public enum TypePrefixMode
-        {
-            Default,
-            Strip,
-            Enforce
-        }
-
-        public class TypePrefix
-        {
-            public char Char { get; set; }
-            public TypePrefixMode Mode { get; set; }
-
-            public TypePrefix()
-            {
-            }
-
-            public TypePrefix(char prefix)
-            {
-                Char = prefix;
-            }
-
-            public TypePrefix(char prefix, TypePrefixMode mode)
-            {
-                Char = prefix;
-                Mode = mode;
-            }
-        }
-
-        public class TypePrefixes
-        {
-            /// <summary>
-            /// Enum types "EMyEnum"
-            /// </summary>
-            public TypePrefix Enum { get; set; }
-
-            /// <summary>
-            /// Generic types "TArray"
-            /// </summary>
-            public TypePrefix Generics { get; set; }
-
-            /// <summary>
-            /// Struct / non UObject class types "FMyStruct"
-            /// </summary>
-            public TypePrefix Struct { get; set; }
-
-            /// <summary>
-            /// Actor types "AActor"
-            /// </summary>
-            public TypePrefix Actor { get; set; }
-
-            /// <summary>
-            /// Object types "UObject"
-            /// </summary>
-            public TypePrefix Object { get; set; }
-
-            /// <summary>
-            /// Interface types "IInterface"
-            /// </summary>
-            public TypePrefix Interface { get; set; }
-
-            public TypePrefixes()
-            {
-                Enum = new TypePrefix('E');
-                Generics = new TypePrefix('T');
-                Struct = new TypePrefix('F');
-                Actor = new TypePrefix('A');
-                Object = new TypePrefix('U');
-                Interface = new TypePrefix('I');
-            }
         }
 
         public enum CodeCasing

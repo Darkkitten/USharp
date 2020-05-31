@@ -43,6 +43,10 @@ namespace UnrealEngine.Runtime
         // call rather than having obscure errors due to the ctor being called too early.
         private static bool ctorsAvailable = false;
 
+        // Loaded = ctorsAvailable, FullyLoaded = ctors recreated and everything reinstanced
+        public static bool Loaded { get; private set; }
+        public static bool FullyLoaded { get; private set; }
+
         private static int numChangedTypes = 0;
         public static bool SkipReinstance { get; private set; }
         public static bool SkipBroadcastHotReload { get; private set; }
@@ -148,10 +152,10 @@ namespace UnrealEngine.Runtime
                     {
                         namesUnsafe.AddRange(values.Keys.ToArray());
                         valuesUnsafe.AddRange(values.Values.ToArray());
-                        Native_UEnum.SetEnums(sharpEnum, namesUnsafe.Address, valuesUnsafe.Address, 
+                        Native_UEnum.SetEnums(sharpEnum, namesUnsafe.Address, valuesUnsafe.Address,
                             UEnum.ECppForm.EnumClass, true);
                     }
-                    
+
                     if (FBuild.WithEditor)
                     {
                         SetAllMetaData(sharpEnum, enumInfo, UMeta.Target.Enum);
@@ -279,7 +283,7 @@ namespace UnrealEngine.Runtime
                 // - FUserDefinedStructureCompilerInner::ReplaceStructWithTempDuplicate
                 using (TArrayUnsafe<IntPtr> oldSharpStructs = new TArrayUnsafe<IntPtr>())
                 {
-                    foreach(ManagedStruct managedStruct in depends.Keys)
+                    foreach (ManagedStruct managedStruct in depends.Keys)
                     {
                         if (managedStruct.OldAddress != IntPtr.Zero)
                         {
@@ -292,7 +296,7 @@ namespace UnrealEngine.Runtime
                         Native_SharpHotReloadUtils.PreUpdateStructs(oldSharpStructs.Address, ref blueprintsToRecompile, ref bpStructsToRecompile);
                     }
                 }
-                Debug.Assert(blueprintsToRecompile != IntPtr.Zero && bpStructsToRecompile != IntPtr.Zero);                
+                Debug.Assert(blueprintsToRecompile != IntPtr.Zero && bpStructsToRecompile != IntPtr.Zero);
             }
 
             HashSet<ManagedStruct> compiledStructs = new HashSet<ManagedStruct>();
@@ -339,15 +343,10 @@ namespace UnrealEngine.Runtime
 
                 FObjectInitializer objectInitializer = new FObjectInitializer(objectInitializerPtr);
 
-                // Call the initializer if this isn't an interface and the initializer is overridden somewhere in the class hierarchy
-                UObject obj = objectInitializer.GetObj();//null;//changed for VTable hacks
-                bool callInitializer = !managedClass.IsInterface && managedClass.TypeInfo.OverridesObjectInitializerHierarchical;
-                if (callInitializer)
-                {
-                    GCHelper.ManagedObjectBeingInitialized = objectInitializer.ObjectAddress;
-                    //obj = objectInitializer.GetObj();
-                    GCHelper.ManagedObjectBeingInitialized = IntPtr.Zero;
-                }
+                // GetObj() will construct a new object. ManagedObjectBeingInitialized guards against calling the Initialize() function
+                GCHelper.ManagedObjectBeingInitialized = objectInitializer.ObjectAddress;
+                UObject obj = objectInitializer.GetObj();
+                GCHelper.ManagedObjectBeingInitialized = IntPtr.Zero;
 
                 // Initialize C# members which can't be zero initialized (e.g. FText)
                 // - Does this impact how the FObjectInitializer destructor is called (it will call FObjectInitializer::InitProperties). This could
@@ -360,7 +359,7 @@ namespace UnrealEngine.Runtime
                     {
                         break;
                     }
-                    
+
                     // Only initialize the value if the property can't be zero initialized
                     if (!Native_UProperty.HasAnyPropertyFlags(prop, EPropertyFlags.ZeroConstructor))
                     {
@@ -381,7 +380,7 @@ namespace UnrealEngine.Runtime
 
                 VTableHacks.HackVTable(obj);
 
-                if (callInitializer)
+                if (!managedClass.IsInterface && managedClass.TypeInfo.OverridesObjectInitializerHierarchical)
                 {
                     try
                     {
@@ -411,7 +410,7 @@ namespace UnrealEngine.Runtime
                             FMessage.OpenDialog(error);
                             lastInitializerException = DateTime.Now;
                         }
-                        FMessage.Log(ELogVerbosity.Error, error);
+                        FMessage.LogException(error);
                     }
                 }
             }
@@ -427,7 +426,7 @@ namespace UnrealEngine.Runtime
             BuildClassesInterfaces(Classes);
         }
 
-        private static void BuildClassAndBaseHierarchical<T>(ManagedClass managedClass, Dictionary<Type, T> collection, 
+        private static void BuildClassAndBaseHierarchical<T>(ManagedClass managedClass, Dictionary<Type, T> collection,
             HashSet<ManagedClass> compiledClasses, Dictionary<string, ManagedClass> classesByPath) where T : ManagedClass
         {
             // If the class has been structurally modified create a reinstancer and reinstance.
@@ -498,7 +497,7 @@ namespace UnrealEngine.Runtime
                         IntPtr interfaceAddress = UClass.GetClassAddress(typeRef.Path);
 
                         // Is 0 the correct pointer offset to use for the vtable?
-                        implementedInterfaces.Add(new FImplementedInterface(interfaceAddress, 0, true));
+                        implementedInterfaces.Add(new FImplementedInterface(interfaceAddress, 0, false));
                     }
                     else
                     {
@@ -516,7 +515,7 @@ namespace UnrealEngine.Runtime
                         parentClass = Runtime.Classes.UObject;
                     }
                 }
-                SetClassParent(sharpClass, parentClass);
+                SetClassParent(classInfo, sharpClass, parentClass);
 
                 // Resolve the native parent class now that the parent class is set up
                 managedClass.ResolveNativeParentClass();
@@ -534,18 +533,11 @@ namespace UnrealEngine.Runtime
                     implementedInterfaces = null;
                 }
 
-                // Inherit the parent class flags if they aren't already set from TypeInfo.ClassFlags
-                EClassFlags classFlags = (Native_UClass.GetClassFlags(parentClass) & EClassFlags.ScriptInherit);
-                classFlags |= managedClass.TypeInfo.ClassFlags;
-
-                // If using UClass EClassFlags.Native is required (otherwise functions are broken on interfaces and runtime errors on classes)
-                // If using UBlueprintGeneratedClass no special EClassFlags are required.
-                classFlags |= EClassFlags.Native;
-
-                Native_UClass.Set_ClassFlags(sharpClass, classFlags);
-
                 // Create functions
-                Native_USharpClass.SetFunctionInvokerAddress(sharpClass, managedClass.FunctionInvokerAddress);
+                if (!managedClass.IsInterface)
+                {
+                    Native_USharpClass.SetFunctionInvokerAddress(sharpClass, managedClass.FunctionInvokerAddress);
+                }
                 foreach (ManagedUnrealFunctionInfo functionInfo in managedClass.TypeInfo.Functions.Reverse<ManagedUnrealFunctionInfo>())
                 {
                     IntPtr function = CreateFunction(sharpClass, parentClass, functionInfo);
@@ -572,7 +564,7 @@ namespace UnrealEngine.Runtime
                 Native_UClass.AssembleReferenceTokenStream(sharpClass, true);
                 managedClass.Linked = true;
             }
-            
+
             if (managedClass.OldAddress != IntPtr.Zero)
             {
                 classesToReinstance.Add(managedClass);
@@ -613,7 +605,7 @@ namespace UnrealEngine.Runtime
                     managedClass.ResolveNativeParentClass();
                 }
 
-                if (managedClass.TypeInfo.Functions.Count > 0)
+                if (managedClass.TypeInfo.Functions.Count > 0 && !managedClass.IsInterface)
                 {
                     Native_USharpClass.SetFunctionInvokerAddress(managedClass.Address, managedClass.FunctionInvokerAddress);
                     foreach (ManagedUnrealFunctionInfo functionInfo in managedClass.TypeInfo.Functions)
@@ -740,11 +732,13 @@ namespace UnrealEngine.Runtime
             hotReloadedClasses.Clear();
             classesToReinstance.Clear();
             ctorsAvailable = false;
+            Loaded = false;
+            FullyLoaded = false;
 
             Dictionary<Type, ManagedTypeBase> allTypes = new Dictionary<Type, ManagedTypeBase>();
             Dictionary<Type, ManagedTypeBase> changedTypes = new Dictionary<Type, ManagedTypeBase>();
             Dictionary<Type, ManagedTypeBase> unchangedTypes = new Dictionary<Type, ManagedTypeBase>();
-            
+
             CollectTypes(Classes, allTypes, changedTypes, unchangedTypes);
             CollectTypes(Interfaces, allTypes, changedTypes, unchangedTypes);
             CollectTypes(Structs, allTypes, changedTypes, unchangedTypes);
@@ -780,7 +774,7 @@ namespace UnrealEngine.Runtime
                             unrealClass = Runtime.Classes.USharpStruct;
                             break;
                         case EPropertyType.Interface:
-                            unrealClass = Runtime.Classes.UInterface;
+                            unrealClass = Runtime.Classes.UClass;
                             break;
                         case EPropertyType.Object:
                             unrealClass = Runtime.Classes.USharpClass;
@@ -866,7 +860,7 @@ namespace UnrealEngine.Runtime
                     UClass.RegisterManagedClass(managedType.Address, managedType.Type);
                 }
             }
-            
+
             if (hotReloadedClasses.Count > 0)
             {
                 UpdateClassReferences(allTypes);
@@ -916,6 +910,9 @@ namespace UnrealEngine.Runtime
             }
 
             ctorsAvailable = true;
+            Loaded = true;
+            // Register latent callbacks now that C# classes are available
+            Engine.ManagedLatentCallbackHelper.RegisterCallbacks();
 
             // Create the CDO for classes after all classes have been initialized as classes may reference other classes.
             foreach (ManagedClass managedClass in Classes.Values)
@@ -936,7 +933,6 @@ namespace UnrealEngine.Runtime
                     foreach (ManagedClass managedClass in classesToReinstance)
                     {
                         IntPtr classReinstancer = IntPtr.Zero;
-
                         classReinstancer = Native_SharpHotReloadUtils.CreateClassReinstancer(
                             managedClass.Address, managedClass.OldAddress != IntPtr.Zero ? managedClass.OldAddress : managedClass.Address);
                         Debug.Assert(classReinstancer != IntPtr.Zero);
@@ -962,6 +958,8 @@ namespace UnrealEngine.Runtime
 
             // Clear any temporary metadata which was created which isn't needed anymore
             ClearTypeMetaData();
+
+            FullyLoaded = true;
         }
 
         private static void CreateCDO(ManagedClass managedClass)
@@ -1061,7 +1059,7 @@ namespace UnrealEngine.Runtime
             }
         }
 
-        private static void SetClassParent(IntPtr sharpClass, IntPtr parentClass)
+        private static void SetClassParent(ManagedUnrealTypeInfo sharpClassInfo, IntPtr sharpClass, IntPtr parentClass)
         {
             IntPtr classWithin = Native_UClass.Get_ClassWithin(parentClass);
             if (classWithin == IntPtr.Zero)
@@ -1069,16 +1067,29 @@ namespace UnrealEngine.Runtime
                 classWithin = Runtime.Classes.UObject;
             }
 
+            // Inherit the parent class flags if they aren't already set from TypeInfo.ClassFlags
+            // If using UClass EClassFlags.Native is required (otherwise functions are broken on interfaces and runtime errors on classes)
+            // If using UBlueprintGeneratedClass no special EClassFlags are required.
+            EClassFlags classFlags = (Native_UClass.GetClassFlags(parentClass) & EClassFlags.ScriptInherit);
+            classFlags |= sharpClassInfo.ClassFlags;
+            classFlags |= EClassFlags.Native;
+            Native_UClass.Set_ClassFlags(sharpClass, classFlags);
+
             FName classConfigName;
-            if (Native_UObjectBaseUtility.IsNative(sharpClass))
+            if (!string.IsNullOrEmpty(sharpClassInfo.ClassConfigName) &&
+                !sharpClassInfo.ClassConfigName.Equals("inherit", StringComparison.OrdinalIgnoreCase))
             {
-                // C++ uses ClassToClean->StaticConfigName() which due to being a static method should
-                // return UObject::StaticConfigName() which doesn't seem too useful
-                Native_UClass.Get_ClassConfigName(sharpClass, out classConfigName);
+                classConfigName = (FName)sharpClassInfo.ClassConfigName;
             }
             else
             {
                 Native_UClass.Get_ClassConfigName(parentClass, out classConfigName);
+            }
+
+            if ((classFlags & EClassFlags.Config) == EClassFlags.Config && classConfigName == FName.None)
+            {
+                FMessage.Log(ELogVerbosity.Warning, "Missing config name for C# class '" + sharpClassInfo.Name + 
+                    "'. Assign it such as: [UClass(Config=\"YourConfigName\")]");
             }
 
             // Set properties we need to regenerate the class with
@@ -1127,7 +1138,8 @@ namespace UnrealEngine.Runtime
                 // we provide const it just shows the interface event (with the correct interface icon).
                 // - Does adding const mess up anything? Const states "function can be called from blueprint code, 
                 //   and only reads state (never writes)".
-                functionFlags |= EFunctionFlags.Const;
+                // NOTE: Const isn't really what we want... this will make the function const (obviously!)
+                //functionFlags |= EFunctionFlags.Const;
 
                 // Setting the super function here doesn't seem to be required.
                 // - C++ NEVER sets the super function for implemented interfaces.
@@ -1257,6 +1269,10 @@ namespace UnrealEngine.Runtime
             if (property == IntPtr.Zero)
             {
                 return IntPtr.Zero;
+            }
+            if (!string.IsNullOrEmpty(paramInfo.DefaultValue))
+            {
+                LateAddMetaData(functionInfo.Path, (FName)("CPP_Default_" + paramInfo.Name), paramInfo.DefaultValue, true);
             }
             ValidateFunctionParamFlags(paramInfo, property, functionFlags);
             return property;
@@ -1812,6 +1828,15 @@ namespace UnrealEngine.Runtime
                         break;
                     case EPropertyType.Struct:
                         Native_USharpStruct.CreateGuid(managedType.Address);
+                        break;
+                    case EPropertyType.Interface:
+                        {
+                            // There is an assert in CreateProperty that requires the interface flag to be set. If one interface
+                            // which refers to another interface is built before that other interface, that assert will fire if
+                            // the interface flag isn't set.
+                            EClassFlags classFlags = Native_UClass.GetClassFlags(managedType.Address);
+                            Native_UClass.Set_ClassFlags(managedType.Address, classFlags | EClassFlags.Interface);
+                        }
                         break;
                 }
             }

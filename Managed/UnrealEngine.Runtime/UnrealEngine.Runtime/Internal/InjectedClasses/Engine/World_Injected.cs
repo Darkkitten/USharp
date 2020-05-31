@@ -8,6 +8,22 @@ namespace UnrealEngine.Engine
 {
     public partial class UWorld : UObject
     {
+        public static UWorld[] GetWorlds()
+        {
+            FWorldContext[] contexts = FWorldContext.GetWorldContexts();
+            UWorld[] result = new UWorld[contexts.Length];
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                result[i] = contexts[i].World();
+            }
+            return result;
+        }
+
+        public FLatentActionManager GetLatentActionManager()
+        {
+            return new FLatentActionManager(Native_UWorld.GetLatentActionManager(Address));
+        }
+
         public T[] GetAllActorsOfClass<T>() where T : AActor
         {
             return UGameplayStatics.GetAllActorsOfClass<T>(this);
@@ -16,6 +32,11 @@ namespace UnrealEngine.Engine
         public List<T> GetAllActorsOfClassList<T>() where T : AActor
         {
             return UGameplayStatics.GetAllActorsOfClassList<T>(this);
+        }
+
+        public APlayerController GetFirstPlayerController()
+        {
+            return GCHelper.Find<APlayerController>(Native_UWorld.GetFirstPlayerController(Address));
         }
 
         public AActor SpawnActor(UClass unrealClass, ref FVector location, ref FRotator rotation, ref FActorSpawnParameters parameters)

@@ -47,6 +47,7 @@ Sequencer
 Slate
 SlateCore
 SourceControl
+StaticMeshDescription
 TimeManagement
 UMG
 UMGEditor
@@ -54,3 +55,8 @@ UnrealEd
 ViewportInteraction
 VREditor
 WidgetCarousel
+Paper2D
+ApexDestruction
+AIModule
+OnlineSubsystem
+OnlineSubsystemUtils

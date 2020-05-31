@@ -37,6 +37,9 @@ namespace UnrealEngine.Runtime
                 modulesByName[modulePath.Key] = UnrealModuleInfo.GetModuleType(modulePath.Key.ToString(), modulePath.Value, plugins);
             }
 
+            // Add the C# game code package name to the module list
+            modulesByName[(FName)(Settings.GetProjectName() + "-Managed")] = UnrealModuleType.Game;
+
             IPlugin.Dispose(plugins);
         }
 
@@ -595,15 +598,6 @@ namespace UnrealEngine.Runtime
             return null;
         }
 
-        private string GetUnrealModuleTypeString(UnrealModuleType moduleType, UnrealModuleType assetModuleType)
-        {
-            if (assetModuleType != UnrealModuleType.Unknown)
-            {
-                return assetModuleType.ToString();
-            }
-            return moduleType.ToString();
-        }
-
         /// <summary>
         /// Namespace of the C# Unreal Engine runtime (UnrealEngine.Runtime)
         /// </summary>
@@ -639,11 +633,11 @@ namespace UnrealEngine.Runtime
             // CodeGenerator.Modules.cs
             UpdateModulesByName();
 
-            // CodeGenerator.AvailableTypes.cs
-            UpdateAvailableTypes();
-
             // CodeGenerator.Properties.cs
             BeginGenerateModules_Properties();
+
+            // CodeGenerator.AvailableTypes.cs
+            UpdateAvailableTypes();
 
             OnBeginGenerateModules();
         }
@@ -695,6 +689,7 @@ namespace UnrealEngine.Runtime
             public string Name { get; set; }
             public string Path { get; set; }
             public UnrealModuleType Type { get; set; }
+            public bool IsBlueprint { get; set; }
 
             public UnrealModuleInfo(UPackage package, string name, string path)
                 : this(package, name, path, UnrealModuleType.Unknown)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using UnrealEngine.Runtime;
 using UnrealEngine.Runtime.Native;
 
@@ -19,7 +20,35 @@ namespace UnrealEngine.Engine
 
         public T GetComponentByClass<T>() where T : UActorComponent
         {
-            return (T)GetComponentByClass(new TSubclassOf<UActorComponent>(UClass.GetClass<T>()));
+            return (T)GetComponentByClass(TSubclassOf<UActorComponent>.From<T>());
+        }
+
+        public T[] GetComponentsByClass<T>() where T : UActorComponent
+        {
+            UClass unrealClass = UClass.GetClass<T>();
+            if (unrealClass == null)
+            {
+                return null;
+            }
+            using (TArrayUnsafe<T> resultUnsafe = new TArrayUnsafe<T>())
+            {
+                Native_AActor.GetComponentsByClass(Address, unrealClass.Address, resultUnsafe.Address);
+                return resultUnsafe.ToArray();
+            }
+        }
+
+        public T[] GetComponentsByTag<T>(FName tag) where T : UActorComponent
+        {
+            UClass unrealClass = UClass.GetClass<T>();
+            if (unrealClass == null)
+            {
+                return null;
+            }
+            using (TArrayUnsafe<T> resultUnsafe = new TArrayUnsafe<T>())
+            {
+                Native_AActor.GetComponentsByTag(Address, unrealClass.Address, ref tag, resultUnsafe.Address);
+                return resultUnsafe.ToArray();
+            }
         }
 
         static int PrimaryActorTick_Offset;
@@ -42,14 +71,22 @@ namespace UnrealEngine.Engine
             PrimaryActorTick_Offset = NativeReflectionCached.GetPropertyOffset(classAddress, "PrimaryActorTick");
         }
 
+        private VTableHacks.CachedFunctionRedirect<VTableHacks.BeginPlayDel_ThisCall> beginPlayRedirect;
         internal override void BeginPlayInternal()
         {
             BeginPlay();
         }
 
+        private VTableHacks.CachedFunctionRedirect<VTableHacks.EndPlayDel_ThisCall> endPlayRedirect;
         internal override void EndPlayInternal(byte endPlayReason)
         {
-            EndPlay((EEndPlayReason)endPlayReason);
+            EndPlay((EEndPlayReason) endPlayReason);
+        }
+
+        private VTableHacks.CachedFunctionRedirect<VTableHacks.ActorGetActorEyesViewPointDel_ThisCall> getActorEyesViewPointRedirect;
+        internal override void GetActorEyesViewPointInternal(out FVector OutLocation, out FRotator OutRotation)
+        {
+            GetActorEyesViewPoint(out OutLocation, out OutRotation);
         }
 
         /// <summary>
@@ -57,6 +94,9 @@ namespace UnrealEngine.Engine
         /// </summary>
         protected virtual void BeginPlay()
         {
+            beginPlayRedirect
+                .Resolve(VTableHacks.ActorBeginPlay, this)
+                .Invoke(Address);
         }
 
         /// <summary>
@@ -65,6 +105,22 @@ namespace UnrealEngine.Engine
         /// <param name="endPlayReason"></param>
         public virtual void EndPlay(EEndPlayReason endPlayReason)
         {
+            endPlayRedirect
+                .Resolve(VTableHacks.ActorEndPlay, this)
+                .Invoke(Address, (byte) endPlayReason);
+        }
+
+        /// <summary>
+        /// Returns the point of view of the actor.
+        /// </summary>
+        /// <remarks>
+        /// Note that this doesn't mean the camera, but the 'eyes' of the actor. For example, for a Pawn, this would define the eye height location, and view rotation (which is different from the pawn rotation which has a zeroed pitch component). A camera first person view will typically use this view point. Most traces (weapon, AI) will be done from this view point.
+        /// </remarks>
+        public virtual void GetActorEyesViewPoint(out FVector OutLocation, out FRotator OutRotation)
+        {
+            getActorEyesViewPointRedirect
+                .Resolve(VTableHacks.ActorGetActorEyesViewPoint, this)
+                .Invoke(Address, out OutLocation, out OutRotation);
         }
 
         /// <summary>

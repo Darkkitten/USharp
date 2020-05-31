@@ -48,6 +48,8 @@ namespace UnrealEngine.Runtime.Native
         public static Del_StaticClass USoftObjectProperty;
         public static Del_StaticClass UDelegateProperty;
         public static Del_StaticClass UMulticastDelegateProperty;
+        public static Del_StaticClass UMulticastInlineDelegateProperty;
+        public static Del_StaticClass UMulticastSparseDelegateProperty;
         public static Del_StaticClass UArrayProperty;
         public static Del_StaticClass UMapProperty;
         public static Del_StaticClass USetProperty;
@@ -68,5 +70,10 @@ namespace UnrealEngine.Runtime.Native
         public static Del_StaticClass USharpClass;
         public static Del_StaticClass USharpStruct;
         public static Del_StaticClass UActorComponent;
+        public static Del_StaticClass APlayerController;
+        public static Del_StaticClass UGameInstanceSubsystem;
+        public static Del_StaticClass UEngineSubsystem;
+        public static Del_StaticClass ULocalPlayerSubsystem;
+        public static Del_StaticClass USubsystem;
     }
 }

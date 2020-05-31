@@ -154,6 +154,16 @@ CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FLifetimeProperty()
 	return sizeof(FLifetimeProperty);
 }
 
+CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FLatentActionInfo()
+{
+	return sizeof(FLatentActionInfo);
+}
+
+CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FGameplayResourceSet()
+{
+	return sizeof(FGameplayResourceSet);
+}
+
 // Math structs
 
 CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FInterpCurvePointFloat()
@@ -352,11 +362,6 @@ CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FEndPhysicsTickFunction()
 	return sizeof(FEndPhysicsTickFunction);
 }
 
-CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FPrimitiveComponentPostPhysicsTickFunction()
-{
-	return sizeof(FPrimitiveComponentPostPhysicsTickFunction);
-}
-
 CSEXPORT int32 CSCONV Export_SizeOfStruct_SizeOf_FSkeletalMeshComponentClothTickFunction()
 {
 	return sizeof(FSkeletalMeshComponentClothTickFunction);
@@ -404,6 +409,9 @@ CSEXPORT void CSCONV Export_SizeOfStruct(RegisterFunc registerFunc)
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_TStatId);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FActorSpawnParameters);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FKey);
+	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FLifetimeProperty);
+	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FLatentActionInfo);
+	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FGameplayResourceSet);
 	
 	// Math structs
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FInterpCurvePointFloat);
@@ -446,7 +454,6 @@ CSEXPORT void CSCONV Export_SizeOfStruct(RegisterFunc registerFunc)
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FActorTickFunction);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FCharacterMovementComponentPostPhysicsTickFunction);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FEndPhysicsTickFunction);
-	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FPrimitiveComponentPostPhysicsTickFunction);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FSkeletalMeshComponentClothTickFunction);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FSkeletalMeshComponentEndPhysicsTickFunction);
 	REGISTER_FUNC(Export_SizeOfStruct_SizeOf_FStartPhysicsTickFunction);

@@ -9,7 +9,7 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// A package.
     /// </summary>
-    [UMetaPath("/Script/CoreUObject.Package", "CoreUObject", UnrealModuleType.Engine)]
+    [UClass(Flags = (ClassFlags)0x10400080), UMetaPath("/Script/CoreUObject.Package")]
     public class UPackage : UObject
     {
         /// <summary>
@@ -33,13 +33,11 @@ namespace UnrealEngine.Runtime
         {
             get
             {
-                // WITH_EDITORONLY_DATA
-                if (Native_UPackage.GetMetaData == null)
-                {
-                    return null;
-                }
-
+#if WITH_EDITOR
                 return GCHelper.Find<UMetaData>(Native_UPackage.GetMetaData(Address));
+#else
+                return null;
+#endif
             }
         }
 
@@ -58,15 +56,13 @@ namespace UnrealEngine.Runtime
         {
             get
             {
-                // WITH_EDITORONLY_DATA
-                if (Native_UPackage.GetFolderName == null)
-                {
-                    return default(FName);
-                }
-
+#if WITH_EDITOR
                 FName result;
                 Native_UPackage.GetFolderName(Address, out result);
                 return result;
+#else
+                return default(FName);
+#endif
             }
         }
 

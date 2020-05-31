@@ -45,6 +45,8 @@ namespace UnrealEngine.Runtime.Native
         public static Del_SizeOf SizeOf_FTickPrerequisite;
         public static Del_SizeOf SizeOf_FKey;
         public static Del_SizeOf SizeOf_FLifetimeProperty;
+        public static Del_SizeOf SizeOf_FLatentActionInfo;
+        public static Del_SizeOf SizeOf_FGameplayResourceSet;
 
         // Math structs
         public static Del_SizeOf SizeOf_FInterpCurvePointFloat;
@@ -87,7 +89,6 @@ namespace UnrealEngine.Runtime.Native
         public static Del_SizeOf SizeOf_FActorTickFunction;
         public static Del_SizeOf SizeOf_FCharacterMovementComponentPostPhysicsTickFunction;
         public static Del_SizeOf SizeOf_FEndPhysicsTickFunction;
-        public static Del_SizeOf SizeOf_FPrimitiveComponentPostPhysicsTickFunction;
         public static Del_SizeOf SizeOf_FSkeletalMeshComponentClothTickFunction;
         public static Del_SizeOf SizeOf_FSkeletalMeshComponentEndPhysicsTickFunction;
         public static Del_SizeOf SizeOf_FStartPhysicsTickFunction;

@@ -13,8 +13,13 @@ namespace UnrealEngine.Runtime
         {
              "/Script/Engine.Actor:ReceiveBeginPlay",
              "/Script/Engine.Actor:ReceiveEndPlay",
+             "/Script/Engine.Actor:GetActorEyesViewPoint",
              "/Script/Engine.ActorComponent:ReceiveBeginPlay",
-             "/Script/Engine.ActorComponent:ReceiveEndPlay"
+             "/Script/Engine.ActorComponent:ReceiveEndPlay",
+
+             // UGameplayTask functions are manually exposed
+             "/Script/GameplayTasks.GameplayTask:ReadyForActivation",
+             "/Script/GameplayTasks.GameplayTask:EndTask",
         };
 
         private bool CanExportFunction(UFunction function, bool isBlueprintType)
@@ -58,6 +63,19 @@ namespace UnrealEngine.Runtime
 
             if (function.GetBoolMetaData(MDFunc.BlueprintInternalUseOnly))
             {
+                // FBlueprintActionDatabaseRegistrar::RegisterClassFactoryActions
+                if (function.HasAnyFunctionFlags(EFunctionFlags.Static) && ownerClass != null)
+                {
+                    UClass actionFactoryClass = GetActionFactoryClass(ownerClass);
+                    if (actionFactoryClass != null)
+                    {
+                        UObjectProperty returnProperty = function.GetReturnProperty() as UObjectProperty;
+                        if (returnProperty != null)
+                        {
+                            return returnProperty.PropertyClass.IsChildOf(actionFactoryClass);
+                        }
+                    }
+                }
                 return false;
             }
 

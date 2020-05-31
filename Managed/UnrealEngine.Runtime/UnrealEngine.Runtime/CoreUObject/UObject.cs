@@ -11,7 +11,7 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// The base class of all objects.
     /// </summary>
-    [UMetaPath("/Script/CoreUObject.Object", "CoreUObject", UnrealModuleType.Engine)]
+    [UClass(Flags = (ClassFlags)0x304001A1), UMetaPath("/Script/CoreUObject.Object")]
     public partial class UObject : IEquatable<UObject>, IInterface
     {
         /// <summary>
@@ -644,16 +644,29 @@ namespace UnrealEngine.Runtime
             return Native_UObjectBaseUtility.IsDefaultSubobject(Address);
         }
 
+        private VTableHacks.CachedFunctionRedirect<VTableHacks.GetLifetimeReplicatedPropsDel_ThisCall> getLifetimeReplicatedPropsRedirect;
+        internal virtual void GetLifetimeReplicatedPropsInternal(IntPtr arrayAddress)
+        {
+            using (TArrayUnsafeRef<FLifetimeProperty> lifetimePropsUnsafe = new TArrayUnsafeRef<FLifetimeProperty>(arrayAddress))
+            {
+                FLifetimePropertyCollection lifetimeProps = new FLifetimePropertyCollection(Address, lifetimePropsUnsafe);
+                GetLifetimeReplicatedProps(lifetimeProps);
+            }
+        }
+
         /// <summary>
         /// Returns properties that are replicated for the lifetime of the actor channel
         /// </summary>
         public virtual void GetLifetimeReplicatedProps(FLifetimePropertyCollection lifetimeProps)
         {
+            getLifetimeReplicatedPropsRedirect
+                .Resolve(VTableHacks.GetLifetimeReplicatedProps, this)
+                .Invoke(Address, lifetimeProps.Address);
         }
 
-        internal virtual void SetupPlayerInputComponent(IntPtr playerInputComponent)
+        internal virtual void SetupPlayerInputComponentInternal(IntPtr playerInputComponent)
         {
-            // This is eventually implemented in APawn
+            // This is eventually implemented in injected classes
         }
 
         internal virtual void BeginPlayInternal()
@@ -662,6 +675,29 @@ namespace UnrealEngine.Runtime
         }
 
         internal virtual void EndPlayInternal(byte endPlayReason)
+        {
+            // This is eventually implemented in injected classes
+        }
+
+        internal virtual void SetupInputComponentInternal()
+        {
+            // This is eventually implemented in injected classes
+        }
+
+        internal virtual void UpdateRotationInternal(float DeltaTime)
+        {
+            // This is eventually implemented in injected classes
+        }
+
+        internal virtual void GetActorEyesViewPointInternal(out FVector OutLocation, out FRotator OutRotation)
+        {
+            // This is eventually implemented in injected classes
+
+            OutLocation = default(FVector);
+            OutRotation = default(FRotator);
+        }
+
+        internal virtual void InitInternal()
         {
             // This is eventually implemented in injected classes
         }
@@ -812,7 +848,7 @@ namespace UnrealEngine.Runtime
         }
 
         /// <summary>
-        /// Invokes a UFunction of the given name using the CDO (class default object)
+        /// Invokes a <see cref="UFunction"/> of the given name using the CDO (class default object)
         /// </summary>
         public static object DynamicInvokeStatic(UClass unrealClass, string functionName, params object[] parameters)
         {
@@ -820,7 +856,7 @@ namespace UnrealEngine.Runtime
         }
 
         /// <summary>
-        /// Invokes a UFunction of the given name
+        /// Invokes a <see cref="UFunction"/> of the given name
         /// </summary>
         public static object DynamicInvoke(UObject obj, string functionName, params object[] parameters)
         {
@@ -829,133 +865,12 @@ namespace UnrealEngine.Runtime
 
         private static object DynamicInvokeInternal(UClass unrealClass, UObject obj, string functionName, params object[] parameters)
         {
-            UFunction func = obj.GetClass().FindFunctionByName(new FName(functionName));
-            if (func == null)
+            UFunction function = obj.GetClass().FindFunctionByName(new FName(functionName));
+            if (function == null)
             {
                 return null;
             }
-
-            if (parameters == null)
-            {
-                parameters = new object[0];
-            }
-
-            bool validParams = true;
-
-            Dictionary<UProperty, Delegate> fromNativeParams = new Dictionary<UProperty, Delegate>();
-            Dictionary<UProperty, Delegate> toNativeParams = new Dictionary<UProperty, Delegate>();
-
-            UProperty returnValueProp = null;
-            List<UProperty> paramProps = new List<UProperty>();
-
-            foreach (UProperty prop in func.GetProperties<UProperty>())
-            {
-                if (prop.HasAnyPropertyFlags(EPropertyFlags.Parm))
-                {
-                    if (prop.HasAnyPropertyFlags(EPropertyFlags.ReturnParm))
-                    {
-                        returnValueProp = prop;
-                    }
-                    else
-                    {
-                        paramProps.Add(prop);
-                    }
-
-                    Type paramType = UProperty.GetTypeFromProperty(prop);
-                    if (paramType == null)
-                    {
-                        validParams = false;
-                        break;
-                    }
-
-                    Delegate fromNative = MarshalingDelegateResolverSlow.GetFromNative(paramType);
-                    Delegate toNative = MarshalingDelegateResolverSlow.GetToNative(paramType);
-                    if (fromNative == null || toNative == null)
-                    {
-                        validParams = false;
-                        break;
-                    }
-
-                    fromNativeParams.Add(prop, fromNative);
-                    toNativeParams.Add(prop, toNative);
-                }
-            }
-
-            if (parameters.Length != paramProps.Count)
-            {
-                validParams = false;
-            }
-
-            if (!validParams)
-            {
-                return null;
-            }
-
-            // Sort the parameters by offset, this is assumingly the correct thing to do?
-            // - Otherwise we need to take the param names into this function. Or just not sort at all?
-            paramProps.Sort((x, y) => x.GetOffset_ForUFunction().CompareTo(y.GetOffset_ForUFunction()));
-
-            object result = null;
-
-            unsafe
-            {
-                int paramsSize = func.ParmsSize;
-                byte* paramsBufferAllocation = stackalloc byte[func.ParmsSize];
-                IntPtr paramsBuffer = new IntPtr(paramsBufferAllocation);
-                FMemory.Memzero(paramsBuffer, paramsSize);
-
-                // Initialize default values for all parameters
-                foreach (UProperty prop in func.GetProperties<UProperty>())
-                {
-                    if (prop.HasAnyPropertyFlags(EPropertyFlags.Parm))
-                    {
-                        Native.Native_UProperty.InitializeValue_InContainer(prop.Address, paramsBuffer);
-                    }
-                }
-
-                // Copy the managed parameters to the buffer
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    UProperty paramProp = paramProps[i];
-                    object paramValue = parameters[i];
-                    if (paramValue != null && (!paramProp.HasAnyPropertyFlags(EPropertyFlags.OutParm) ||
-                        paramProp.HasAnyPropertyFlags(EPropertyFlags.ReferenceParm)))
-                    {
-                        toNativeParams[paramProp].DynamicInvoke(
-                            paramsBuffer + paramProp.GetOffset_ForUFunction(), (int)0, paramProp.Address, paramValue);
-                    }
-                }
-
-                // Invoke the function
-                NativeReflection.InvokeFunction(obj.Address, func.Address, paramsBuffer, paramsSize);
-
-                // Copy parameters / return value from the buffer
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    UProperty paramProp = paramProps[i];
-                    if (paramProp.HasAnyPropertyFlags(EPropertyFlags.OutParm))
-                    {
-                        parameters[i] = fromNativeParams[paramProp].DynamicInvoke(
-                            paramsBuffer + paramProp.GetOffset_ForUFunction(), (int)0, paramProp.Address);
-                    }
-                }
-                if (returnValueProp != null)
-                {
-                    result = fromNativeParams[returnValueProp].DynamicInvoke(
-                        paramsBuffer + returnValueProp.GetOffset_ForUFunction(), (int)0, returnValueProp.Address);
-                }
-
-                // Destroy the memory for all of the parameters
-                foreach (UProperty prop in func.GetProperties<UProperty>())
-                {
-                    if (prop.HasAnyPropertyFlags(EPropertyFlags.Parm))
-                    {
-                        Native.Native_UProperty.DestroyValue_InContainer(prop.Address, paramsBuffer);
-                    }
-                }
-            }
-
-            return result;
+            return function.DynamicInvoke(obj, parameters);
         }
 
         public virtual void Initialize()
@@ -995,7 +910,21 @@ namespace UnrealEngine.Runtime
         {
         }
 
-        internal void ReleaseInjectedInterfaces()
+        internal void OnDestroyedInternal()
+        {
+            ReleaseInjectedInterfaces();
+            OnDestroyed();
+        }
+
+        /// <summary>
+        /// Called when the C++ object has been completely destroyed. You can free C# related objects at this point, but you cannot access
+        /// any UE4 related properties / functions.
+        /// </summary>
+        protected virtual void OnDestroyed()
+        {
+        }
+
+        private void ReleaseInjectedInterfaces()
         {
             if (injectedInterfaces != null)
             {
@@ -1100,16 +1029,6 @@ namespace UnrealEngine.Runtime
                 return Native_UClass.ImplementsInterface(Native_UObjectBase.GetClass(Address), interfaceClass.Address);
             }
             return false;
-        }
-
-        public Coroutine StartCoroutine(object obj, IEnumerator coroutine, bool pool = Coroutine.PoolByDefault)
-        {
-            return Coroutine.StartCoroutine(this, coroutine, pool);
-        }
-
-        public Coroutine StartCoroutine(IEnumerator coroutine, CoroutineGroup group = CoroutineGroup.Tick, bool pool = Coroutine.PoolByDefault)
-        {
-            return Coroutine.StartCoroutine(this, coroutine, group, pool);
         }
 
         public Coroutine StartCoroutine(IEnumerator coroutine, CoroutineGroup group = CoroutineGroup.Tick, string tag = null, bool pool = Coroutine.PoolByDefault)

@@ -18,114 +18,265 @@ namespace UnrealEngine.Runtime
             IntPtr pawnClass = Runtime.Classes.APawn;
             IntPtr actorClass = Runtime.Classes.AActor;
             IntPtr actorComponentClass = Runtime.Classes.UActorComponent;
+            IntPtr playerControllerClass = Runtime.Classes.APlayerController;
+            IntPtr gameInstanceClass = Runtime.Classes.UGameInstance;
+            IntPtr subsystemClass = Runtime.Classes.USubsystem;
 
-            repProps = AddVTableRedirect(objectClass, "DummyRepProps", new GetLifetimeReplicatedPropsDel(OnGetLifetimeReplicatedProps));
-            setupPlayerInput = AddVTableRedirect(pawnClass, "DummySetupPlayerInput", new SetupPlayerInputComponentDel(OnSetupPlayerInputComponent));
-            actorBeginPlay = AddVTableRedirect(actorClass, "DummyActorBeginPlay", new ActorBeginPlayDel(OnActorBeginPlay));
-            actorEndPlay = AddVTableRedirect(actorClass, "DummyActorEndPlay", new ActorEndPlayDel(OnActorEndPlay));
-            actorComponentBeginPlay = AddVTableRedirect(actorComponentClass, "DummyActorComponentBeginPlay", new ActorComponentBeginPlayDel(OnActorComponentBeginPlay));
-            actorComponentEndPlay = AddVTableRedirect(actorComponentClass, "DummyActorComponentEndPlay", new ActorComponentEndPlayDel(OnActorComponentEndPlay));
+            GetLifetimeReplicatedProps = AddVTableRedirect(objectClass, "DummyRepProps", new GetLifetimeReplicatedPropsDel(OnGetLifetimeReplicatedProps));
+            PawnSetupPlayerInputComponent = AddVTableRedirect(pawnClass, "DummySetupPlayerInput", new PawnSetupPlayerInputComponentDel(OnPawnSetupPlayerInputComponent));
+            ActorBeginPlay = AddVTableRedirect(actorClass, "DummyActorBeginPlay", new BeginPlayDel(OnActorBeginPlay));
+            ActorEndPlay = AddVTableRedirect(actorClass, "DummyActorEndPlay", new EndPlayDel(OnActorEndPlay));
+            ActorGetActorEyesViewPoint = AddVTableRedirect(actorClass, "DummyActorGetActorEyesViewPoint", new ActorGetActorEyesViewPointDel(OnActorGetActorEyesViewPoint));
+            ActorComponentBeginPlay = AddVTableRedirect(actorComponentClass, "DummyActorComponentBeginPlay", new BeginPlayDel(OnActorComponentBeginPlay));
+            ActorComponentEndPlay = AddVTableRedirect(actorComponentClass, "DummyActorComponentEndPlay", new EndPlayDel(OnActorComponentEndPlay));
+            PlayerControllerSetupInputComponent = AddVTableRedirect(playerControllerClass, "DummyPlayerControllerSetupInputComponent", new PlayerControllerSetupInputComponentDel(OnPlayerControllerSetupInputComponent));
+            PlayerControllerUpdateRotation = AddVTableRedirect(playerControllerClass, "DummyPlayerControllerUpdateRotation", new PlayerControllerUpdateRotationDel(OnPlayerControllerUpdateRotation));
+            GameInstanceInit = AddVTableRedirect(gameInstanceClass, "DummyGameInstanceInit", new GameInstanceInitDel(OnGameInstanceInit));
+            SubsystemInitialize = AddVTableRedirect(subsystemClass, "DummySubsystemInitialize", new SubsystemInitializeDel(OnSubsystemInitialize));
+            SubsystemDeinitialize = AddVTableRedirect(subsystemClass, "DummySubsystemDeinitialize", new SubsystemDeinitializeDel(OnSubsystemDeinitialize));
+            SubsystemShouldCreateSubsystem = AddVTableRedirect(subsystemClass, "DummySubsystemShouldCreateSubsystem", new SubsystemShouldCreateSubsystemDel(OnSubsystemShouldCreateSubsystem));
         }
 
-        private static FunctionRedirect repProps;
+        private static void LogCallbackException(string functionName, Exception e)
+        {
+            FMessage.LogException(e, "vtable func");
+        }
+
+        public static FunctionRedirect GetLifetimeReplicatedProps { get; private set; }
         delegate void GetLifetimeReplicatedPropsDel(IntPtr address, IntPtr arrayAddress);
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        delegate void GetLifetimeReplicatedPropsDel_ThisCall(IntPtr address, IntPtr arrayAddress);
+        public delegate void GetLifetimeReplicatedPropsDel_ThisCall(IntPtr address, IntPtr arrayAddress);
         private static void OnGetLifetimeReplicatedProps(IntPtr address, IntPtr arrayAddress)
         {
-            UObject obj = GCHelper.Find(address);
-
-            GetLifetimeReplicatedPropsDel_ThisCall original = repProps.GetOriginal<GetLifetimeReplicatedPropsDel_ThisCall>(obj);
-            original(address, arrayAddress);
-            //Native_VTableHacks.CallOriginal_GetLifetimeReplicatedProps(original, address, arrayAddress);
-
-            using (TArrayUnsafeRef<FLifetimeProperty> lifetimePropsUnsafe = new TArrayUnsafeRef<FLifetimeProperty>(arrayAddress))
+            try
             {
-                FLifetimePropertyCollection lifetimeProps = new FLifetimePropertyCollection(address, lifetimePropsUnsafe);
-                obj.GetLifetimeReplicatedProps(lifetimeProps);
+                UObject obj = GCHelper.Find(address);
+                obj.GetLifetimeReplicatedPropsInternal(arrayAddress);
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnGetLifetimeReplicatedProps), e);
             }
         }
 
-        private static FunctionRedirect setupPlayerInput;
-        delegate void SetupPlayerInputComponentDel(IntPtr address, IntPtr inputComponentAddress);
+        public static FunctionRedirect PawnSetupPlayerInputComponent { get; private set; }
+        delegate void PawnSetupPlayerInputComponentDel(IntPtr address, IntPtr inputComponentAddress);
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        delegate void SetupPlayerInputComponentDel_ThisCall(IntPtr address, IntPtr inputComponentAddress);
-        private static void OnSetupPlayerInputComponent(IntPtr address, IntPtr inputComponentAddress)
+        public delegate void PawnSetupPlayerInputComponentDel_ThisCall(IntPtr address, IntPtr inputComponentAddress);
+        private static void OnPawnSetupPlayerInputComponent(IntPtr address, IntPtr inputComponentAddress)
         {
-            UObject obj = GCHelper.Find(address);
-
-            SetupPlayerInputComponentDel_ThisCall original = setupPlayerInput.GetOriginal<SetupPlayerInputComponentDel_ThisCall>(obj);
-            original(address, inputComponentAddress);
-            //Native_VTableHacks.CallOriginal_SetupPlayerInputComponent(original, address, inputComponentAddress);
-
-            obj.SetupPlayerInputComponent(inputComponentAddress);
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.SetupPlayerInputComponentInternal(inputComponentAddress);
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnPawnSetupPlayerInputComponent), e);
+            }
         }
 
-        private static FunctionRedirect actorBeginPlay;
-        delegate void ActorBeginPlayDel(IntPtr address);
+        public static FunctionRedirect ActorBeginPlay { get; private set; }
+        delegate void BeginPlayDel(IntPtr address);
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        delegate void ActorBeginPlayDel_ThisCall(IntPtr address);
+        public delegate void BeginPlayDel_ThisCall(IntPtr address);
         private static void OnActorBeginPlay(IntPtr address)
         {
-            UObject obj = GCHelper.Find(address);
-
-            ActorBeginPlayDel_ThisCall original = actorBeginPlay.GetOriginal<ActorBeginPlayDel_ThisCall>(obj);
-            original(address);
-            //Native_VTableHacks.CallOriginal_ActorBeginPlay(original, address);
-
-            obj.BeginPlayInternal();
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.BeginPlayInternal();
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnActorBeginPlay), e);
+            }
         }
 
-        private static FunctionRedirect actorEndPlay;
-        delegate void ActorEndPlayDel(IntPtr address, byte endPlayReason);
+        public static FunctionRedirect ActorEndPlay { get; private set; }
+        delegate void EndPlayDel(IntPtr address, byte endPlayReason);
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        delegate void ActorEndPlayDel_ThisCall(IntPtr address, byte endPlayReason);
+        public delegate void EndPlayDel_ThisCall(IntPtr address, byte endPlayReason);
         private static void OnActorEndPlay(IntPtr address, byte endPlayReason)
         {
-            UObject obj = GCHelper.Find(address);
-
-            ActorEndPlayDel_ThisCall original = actorEndPlay.GetOriginal<ActorEndPlayDel_ThisCall>(obj);
-            original(address, endPlayReason);
-            //Native_VTableHacks.CallOriginal_ActorEndPlay(original, address, endPlayReason);
-
-            obj.EndPlayInternal(endPlayReason);
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.EndPlayInternal(endPlayReason);
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnActorEndPlay), e);
+            }
         }
 
-        private static FunctionRedirect actorComponentBeginPlay;
-        delegate void ActorComponentBeginPlayDel(IntPtr address);
+        public static FunctionRedirect ActorGetActorEyesViewPoint { get; private set; }
+        delegate void ActorGetActorEyesViewPointDel(IntPtr address, out FVector OutLocation, out FRotator OutRotation);
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        delegate void ActorComponentBeginPlayDel_ThisCall(IntPtr address);
+        public delegate void ActorGetActorEyesViewPointDel_ThisCall(IntPtr address, out FVector OutLocation, out FRotator OutRotation);
+        private static void OnActorGetActorEyesViewPoint(IntPtr address, out FVector OutLocation, out FRotator OutRotation)
+        {
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.GetActorEyesViewPointInternal(out OutLocation, out OutRotation);
+            }
+            catch (Exception e)
+            {
+                OutLocation = default(FVector);
+                OutRotation = default(FRotator);
+
+                LogCallbackException(nameof(OnActorGetActorEyesViewPoint), e);
+            }
+        }
+
+        public static FunctionRedirect ActorComponentBeginPlay { get; private set; }
         private static void OnActorComponentBeginPlay(IntPtr address)
         {
-            UObject obj = GCHelper.Find(address);
-
-            ActorComponentBeginPlayDel_ThisCall original = actorComponentBeginPlay.GetOriginal<ActorComponentBeginPlayDel_ThisCall>(obj);
-            original(address);
-            //Native_VTableHacks.CallOriginal_ActorComponentBeginPlay(original, address);
-
-            obj.BeginPlayInternal();
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.BeginPlayInternal();
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnActorComponentBeginPlay), e);
+            }
         }
 
-        private static FunctionRedirect actorComponentEndPlay;
-        delegate void ActorComponentEndPlayDel(IntPtr address, byte endPlayReason);
-        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        delegate void ActorComponentEndPlayDel_ThisCall(IntPtr address, byte endPlayReason);
+        public static FunctionRedirect ActorComponentEndPlay { get; private set; }
         private static void OnActorComponentEndPlay(IntPtr address, byte endPlayReason)
         {
-            UObject obj = GCHelper.Find(address);
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.EndPlayInternal(endPlayReason);
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnActorComponentEndPlay), e);
+            }
+        }
 
-            ActorComponentEndPlayDel_ThisCall original = actorComponentEndPlay.GetOriginal<ActorComponentEndPlayDel_ThisCall>(obj);
-            original(address, endPlayReason);
-            //Native_VTableHacks.CallOriginal_ActorComponentEndPlay(original, 
+        public static FunctionRedirect PlayerControllerSetupInputComponent { get; private set; }
+        delegate void PlayerControllerSetupInputComponentDel(IntPtr address);
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+        public delegate void PlayerControllerSetupInputComponentDel_ThisCall(IntPtr address);
+        private static void OnPlayerControllerSetupInputComponent(IntPtr address)
+        {
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.SetupInputComponentInternal();
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnPlayerControllerSetupInputComponent), e);
+            }
+        }
 
-            obj.EndPlayInternal(endPlayReason);
+        public static FunctionRedirect PlayerControllerUpdateRotation { get; private set; }
+        delegate void PlayerControllerUpdateRotationDel(IntPtr address, float deltaTime);
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+        public delegate void PlayerControllerUpdateRotationDel_ThisCall(IntPtr address, float deltaTime);
+        private static void OnPlayerControllerUpdateRotation(IntPtr address, float deltaTime)
+        {
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.UpdateRotationInternal(deltaTime);
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnPlayerControllerUpdateRotation), e);
+            }
+        }
+
+        public static FunctionRedirect GameInstanceInit { get; private set; }
+        delegate void GameInstanceInitDel(IntPtr address);
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+        public delegate void GameInstanceInitDel_ThisCall(IntPtr address);
+        private static void OnGameInstanceInit(IntPtr address)
+        {
+            try
+            {
+                UObject obj = GCHelper.Find(address);
+                obj.InitInternal();
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnGameInstanceInit), e);
+            }
+        }
+
+        public static FunctionRedirect SubsystemInitialize { get; private set; }
+        delegate void SubsystemInitializeDel(IntPtr address, IntPtr collectionAddress);
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+        public delegate void SubsystemInitializeDel_ThisCall(IntPtr address, IntPtr collectionAddress);
+        private static void OnSubsystemInitialize(IntPtr address, IntPtr collectionAddress)
+        {
+            try
+            {
+                USubsystem obj = GCHelper.Find<USubsystem>(address);
+
+                if (obj != null)
+                {
+                    FSubsystemCollection subsystemCollection = new FSubsystemCollection(collectionAddress);
+                    obj.Initialize(subsystemCollection);
+                }
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnSubsystemInitialize), e);
+            }
+        }
+
+        public static FunctionRedirect SubsystemDeinitialize { get; private set; }
+        delegate void SubsystemDeinitializeDel(IntPtr address);
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+        public delegate void SubsystemDeinitializeDel_ThisCall(IntPtr address);
+        private static void OnSubsystemDeinitialize(IntPtr address)
+        {
+            try
+            {
+                USubsystem obj = GCHelper.Find<USubsystem>(address);
+                obj?.Deinitialize();
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnSubsystemDeinitialize), e);
+            }
+        }
+
+        public static FunctionRedirect SubsystemShouldCreateSubsystem { get; private set; }
+        delegate bool SubsystemShouldCreateSubsystemDel(IntPtr address, IntPtr collectionAddress);
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+        public delegate bool SubsystemShouldCreateSubsystemDel_ThisCall(IntPtr address, IntPtr otherAddress);
+        private static bool OnSubsystemShouldCreateSubsystem(IntPtr address, IntPtr otherAddress)
+        {
+            try
+            {
+                USubsystem obj = GCHelper.Find<USubsystem>(address);
+                UObject otherObj = GCHelper.Find<UObject>(otherAddress);
+
+                if (obj != null)
+                {
+                    return obj.ShouldCreateSubsystem(otherObj);
+                }
+            }
+            catch (Exception e)
+            {
+                LogCallbackException(nameof(OnSubsystemShouldCreateSubsystem), e);
+            }
+
+            return false;
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////
         // Add vtable redirects above this line
         ////////////////////////////////////////////////////////////////////////////////////////
 
-        class FunctionRedirect
+        public class FunctionRedirect
         {
             public IntPtr Class;
             public int VTableIndex;
@@ -269,7 +420,8 @@ namespace UnrealEngine.Runtime
                         if (unrealClass.VTableOriginalFunctions != null &&
                             unrealClass.VTableOriginalFunctions.TryGetValue(redirect.VTableIndex, out originalFunc))
                         {
-                            FMemory.PageProtect((IntPtr)(&vtable[redirect.VTableIndex]), (IntPtr)IntPtr.Size, true, true);
+                            IntPtr pageAlignedPtr = FMemory.PageAlignPointer((IntPtr)(&vtable[redirect.VTableIndex]));
+                            FMemory.PageProtect(pageAlignedPtr, (IntPtr)IntPtr.Size, true, true);
                             *(&vtable[redirect.VTableIndex]) = originalFunc.FuncAddress;
                         }
                     }
@@ -312,7 +464,8 @@ namespace UnrealEngine.Runtime
                                 }
                             }
 
-                            FMemory.PageProtect((IntPtr)(&vtable[redirect.VTableIndex]), (IntPtr)IntPtr.Size, true, true);
+                            IntPtr pageAlignedPtr = FMemory.PageAlignPointer((IntPtr)(&vtable[redirect.VTableIndex]));
+                            FMemory.PageProtect(pageAlignedPtr, (IntPtr)IntPtr.Size, true, true);
                             *(&vtable[redirect.VTableIndex]) = redirect.NativeCallback;
                         }
                         else
@@ -360,6 +513,31 @@ namespace UnrealEngine.Runtime
                 }
             }
             return originalOwner;
+        }
+
+        public struct CachedFunctionRedirect<T> where T : class
+        {
+            private T cachedFunc;
+
+            public CachedFunctionRedirect(UObject obj)
+            {
+                cachedFunc = null;
+            }
+
+            public T Resolve(FunctionRedirect functionRedirect, UObject obj)
+            {
+                if (cachedFunc == null)
+                {
+                    cachedFunc = functionRedirect.GetOriginal<T>(obj);
+                }
+
+                if (cachedFunc == null)
+                {
+                    throw new Exception("FunctionRedirect did not result in a function pointer");
+                }
+
+                return cachedFunc;
+            }
         }
     }
 }

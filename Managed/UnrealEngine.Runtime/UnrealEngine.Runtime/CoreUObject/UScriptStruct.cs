@@ -10,7 +10,7 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// Reflection data for a structure.
     /// </summary>
-    [UMetaPath("/Script/CoreUObject.ScriptStruct", "CoreUObject", UnrealModuleType.Engine)]
+    [UClass(Flags = (ClassFlags)0x104000A0), UMetaPath("/Script/CoreUObject.ScriptStruct")]
     public partial class UScriptStruct : UStruct
     {
         public EStructFlags StructFlags
@@ -51,12 +51,6 @@ namespace UnrealEngine.Runtime
         /// <param name="inStructData">The memory location to initialize</param>
         public void InitializeDefaultValue(byte[] inStructData)
         {
-            // WITH_EDITOR
-            if (Native_UScriptStruct.InitializeDefaultValue == null)
-            {
-                return;
-            }
-
             Native_UScriptStruct.InitializeDefaultValue(Address, inStructData);
         }
 

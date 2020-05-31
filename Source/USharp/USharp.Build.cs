@@ -31,6 +31,7 @@ namespace UnrealBuildTool.Rules
                     "USharp/Private/ExportedFunctions/Properties",
                     "USharp/Private/ExportedFunctions/Internal",
                     "USharp/Private/ExportedFunctions/ConsoleManager",
+                    "USharp/Private/ExportedFunctions/Online",
                     // ... add other private include paths required here ...
                 }
                 );
@@ -43,7 +44,10 @@ namespace UnrealBuildTool.Rules
                     "Projects",
                     "InputCore",
                     "Slate",
-                    "Projects"
+                    "Projects",
+                    "UMG",
+                    "GameplayTasks",
+                    "OnlineSubsystem"
                     // ... add other public dependencies that you statically link with here ...
                 }
                 );
@@ -51,6 +55,7 @@ namespace UnrealBuildTool.Rules
             {
                 PublicDependencyModuleNames.AddRange(
                     new string[] {
+                        "Kismet",
                         "UnrealEd",
                         "BlueprintGraph",
                         "KismetCompiler",
@@ -220,13 +225,11 @@ namespace UnrealBuildTool.Rules
                     }
                 }
                 
-                switch (Target.Platform)
+                if (Target.Platform == UnrealTargetPlatform.Android)
                 {
-                    case UnrealTargetPlatform.Android:
-                        // Mono is currently the only supported runtime on Android. Ensure that it gets packaged.
-                        copyMono = true;
-                        copyCoreCLR = false;
-                        break;
+                    // Mono is currently the only supported runtime on Android. Ensure that it gets packaged.
+                    copyMono = true;
+                    copyCoreCLR = false;
                 }
                 
                 if (copyMono && !Directory.Exists(sourceMonoDir))

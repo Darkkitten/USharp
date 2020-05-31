@@ -76,7 +76,7 @@ namespace UnrealEngine.Runtime
 
             AddPathAttribute(type, delegateInfo);
 
-            CreateLoadNativeTypeMethod(type, delegateInfo, injectedMembers);
+            CreateLoadNativeTypeMethod(type, null, delegateInfo, injectedMembers);
         }
 
         private MethodDefinition WriteDelegateInvoker(TypeDefinition type, MethodDefinition signature, ManagedUnrealTypeInfo typeInfo,
@@ -149,7 +149,7 @@ namespace UnrealEngine.Runtime
                     // The definition method. Replace the body with a call to the correct UFunction for the given UObject.
                     WriteNativeFunctionInvoker(type, typeInfo, functionInfo, method, injectedMembers, perInstanceFunctionAddress);
 
-                    if (implementationMethods.Count == 0 && (functionInfo.IsBlueprintImplemented ||
+                    if (implementationMethods.Count == 0 && (functionInfo.IsBlueprintImplementable ||
                         codeSettings.UseImplicitBlueprintImplementableEvent))
                     {
                         // The "_Implementation" method is being skipped 

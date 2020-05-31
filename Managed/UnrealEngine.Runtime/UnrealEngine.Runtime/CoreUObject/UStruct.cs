@@ -9,7 +9,7 @@ namespace UnrealEngine.Runtime
     /// <summary>
     /// Base class for all UObject types that contain fields.
     /// </summary>
-    [UMetaPath("/Script/CoreUObject.Struct", "CoreUObject", UnrealModuleType.Engine)]
+    [UClass(Flags = (ClassFlags)0x104000A0), UMetaPath("/Script/CoreUObject.Struct")]
     public class UStruct : UField
     {
         private CachedUObject<UField> children;
@@ -238,13 +238,11 @@ namespace UnrealEngine.Runtime
         /// <returns></returns>
         public bool GetBoolMetaDataHierarchical(FName key)
         {
-            // WITH_EDITOR
-            if (Native_UStruct.GetBoolMetaDataHierarchical == null)
-            {
-                return false;
-            }
-
+#if WITH_EDITOR
             return Native_UStruct.GetBoolMetaDataHierarchical(Address, ref key);
+#else
+            return false;
+#endif
         }
 
         /// <summary>
@@ -253,20 +251,19 @@ namespace UnrealEngine.Runtime
         /// <param name="key"></param>
         /// <param name="outValue"></param>
         /// <returns></returns>
-        public bool GetStringMetaDataHierarchical(FName key, ref string outValue)
+        public bool GetStringMetaDataHierarchical(FName key, out string outValue)
         {
-            // WITH_EDITOR
-            if (Native_UStruct.GetStringMetaDataHierarchical == null)
-            {
-                return false;
-            }
-
-            using (FStringUnsafe outValueUnsafe = new FStringUnsafe(outValue))
+#if WITH_EDITOR
+            using (FStringUnsafe outValueUnsafe = new FStringUnsafe())
             {
                 bool result = Native_UStruct.GetStringMetaDataHierarchical(Address, ref key, ref outValueUnsafe.Array);
                 outValue = outValueUnsafe.Value;
                 return result;
             }
+#else
+            outValue = null;
+            return false;
+#endif
         }
 
         //public T GetProperty<T>(string name) where T : UProperty

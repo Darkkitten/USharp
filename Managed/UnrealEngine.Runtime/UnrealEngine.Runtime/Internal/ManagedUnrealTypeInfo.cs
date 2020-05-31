@@ -383,8 +383,8 @@ namespace UnrealEngine.Runtime
         {
             // Some class flags must be resolved based on the parent flags and class properties.
             // Due to how types are loaded these flags have to be resolved after the module is created.
-            // (Currently when processing any given type, if it sees an unknown type it  will immediately 
-            //  start processing that type before the current one is finished.)
+            // (Currently when processing any given type, if it sees an unknown type it will immediately 
+            // start processing that type before the current one is finished.)
 
             foreach (ManagedUnrealTypeInfo typeInfo in Classes)
             {
@@ -1002,6 +1002,16 @@ namespace UnrealEngine.Runtime
                 if (typeInfo.TypeCode == EPropertyType.MulticastDelegate)
                 {
                     functionInfo.Flags |= EFunctionFlags.MulticastDelegate;
+                }
+
+                var attributes = type.GetCustomAttributes<ManagedUnrealAttributeBase>(false);
+                if (attributes != null)
+                {
+                    foreach (ManagedUnrealAttributeBase attribute in attributes)
+                    {
+                        attribute.ProcessFunction(functionInfo);
+                        attribute.ProcessFunctionParams(functionInfo);
+                    }
                 }
 
                 functionInfo.Name = GetUniqueMemberName(typeInfo, functionInfo, method);
@@ -1636,6 +1646,7 @@ namespace UnrealEngine.Runtime
                 functionInfo = cachedDummyFunctionInfo;
                 functionInfo.Flags = 0;
                 functionInfo.AdditionalFlags = 0;
+                functionInfo.OriginalName = null;
             }
 
             var attributes = originalMethod.GetCustomAttributes<ManagedUnrealAttributeBase>(false);
@@ -1678,10 +1689,16 @@ namespace UnrealEngine.Runtime
                 {
                     originalName = baseFlags.OriginalName;
 
-                    additionalFlags = (baseFlags.AdditionalFlags & ManagedUnrealFunctionFlags.FuncInherit);
                     if (baseMethod.DeclaringType.IsInterface)
                     {
+                        // Maybe allow all flags to be inherited?
+                        additionalFlags = (baseFlags.AdditionalFlags &
+                            (ManagedUnrealFunctionFlags.FuncInherit | ManagedUnrealFunctionFlags.BlueprintImplementable));
                         additionalFlags |= ManagedUnrealFunctionFlags.InterfaceImplementation;
+                    }
+                    else
+                    {
+                        additionalFlags = (baseFlags.AdditionalFlags & ManagedUnrealFunctionFlags.FuncInherit);
                     }
 
                     // Allow SealedEvent to be set so that we can at least make the function sealed / final if needed.
@@ -1882,10 +1899,16 @@ namespace UnrealEngine.Runtime
         }
 
         private bool TryGetClassFlags(ManagedUnrealTypeInfo typeInfo, Type type, bool lateResolve,
+            out KeyValuePair<EClassFlags, ManagedUnrealTypeInfoFlags> outFlags)
+        {
+            string classConfigName;
+            return TryGetClassFlags(typeInfo, type, lateResolve, out outFlags, out classConfigName);
+        }
+
+        private bool TryGetClassFlags(ManagedUnrealTypeInfo typeInfo, Type type, bool lateResolve,
             out KeyValuePair<EClassFlags, ManagedUnrealTypeInfoFlags> outFlags, out string classConfigName)
         {
             const EClassFlags inheritFlags = EClassFlags.Inherit;//EClassFlags.ScriptInherit;// Inherit or ScriptInherit?
-            const string inheritConfig = "inherit";// Use parents config name
 
             EClassFlags flags = 0;
             ManagedUnrealTypeInfoFlags additionalFlags = 0;
@@ -1906,6 +1929,16 @@ namespace UnrealEngine.Runtime
                     typeInfo.Flags = 0;
                     typeInfo.AdditionalFlags = 0;
                     typeInfo.ClassConfigName = null;
+                    // The type should either be an interface (IInterface) or UObject type
+                    if (type.IsInterface)
+                    {
+                        typeInfo.TypeCode = EPropertyType.Interface;
+                    }
+                    else
+                    {
+                        Debug.Assert(type.IsSameOrSubclassOf(typeof(UObject)));
+                        typeInfo.TypeCode = EPropertyType.Object;
+                    }
                 }
                 if (typeInfo.IsInterface)
                 {
@@ -1991,11 +2024,6 @@ namespace UnrealEngine.Runtime
                         if (TryGetClassFlags(null, type.BaseType, lateResolve, out baseFlags, out baseClassConfig))
                         {
                             flags |= baseFlags.Key & inheritFlags;
-                            if (!string.IsNullOrEmpty(baseClassConfig) &&
-                                (string.IsNullOrEmpty(classConfigName) || classConfigName.Equals(inheritConfig, StringComparison.CurrentCultureIgnoreCase)))
-                            {
-                                classConfigName = baseClassConfig;
-                            }
                             if (baseFlags.Value.HasFlag(ManagedUnrealTypeInfoFlags.Actor))
                             {
                                 additionalFlags |= ManagedUnrealTypeInfoFlags.Actor;
@@ -2009,15 +2037,10 @@ namespace UnrealEngine.Runtime
                             additionalFlags |= ManagedUnrealTypeInfoFlags.ImplementsInterface;
 
                             KeyValuePair<EClassFlags, ManagedUnrealTypeInfoFlags> interfaceFlags;
-                            string interfaceConfig;// Can an interface have a config? It has to properties to config.
+                            string interfaceConfig;
                             if (TryGetClassFlags(null, interfaceType, lateResolve, out interfaceFlags, out interfaceConfig))
                             {
                                 flags |= interfaceFlags.Key & inheritFlags;
-                                if (!string.IsNullOrEmpty(interfaceConfig) &&
-                                    (string.IsNullOrEmpty(classConfigName) || classConfigName.Equals(inheritConfig, StringComparison.CurrentCultureIgnoreCase)))
-                                {
-                                    classConfigName = interfaceConfig;
-                                }
                             }
                         }
                     }
@@ -2030,16 +2053,10 @@ namespace UnrealEngine.Runtime
                 changed = true;
 
                 KeyValuePair<EClassFlags, ManagedUnrealTypeInfoFlags> baseFlags;
-                string baseClassConfig;
                 if (type.BaseType != null && type.BaseType != typeof(object) &&
-                    TryGetClassFlags(null, type.BaseType, lateResolve, out baseFlags, out baseClassConfig))
+                    TryGetClassFlags(null, type.BaseType, lateResolve, out baseFlags))
                 {
                     flags |= baseFlags.Key & inheritFlags;
-                    if (!string.IsNullOrEmpty(baseClassConfig) &&
-                        (string.IsNullOrEmpty(classConfigName) || classConfigName.Equals(inheritConfig, StringComparison.CurrentCultureIgnoreCase)))
-                    {
-                        classConfigName = baseClassConfig;
-                    }
                 }
 
                 if (typeInfo != null && !flags.HasFlag(EClassFlags.Config))
@@ -2056,14 +2073,6 @@ namespace UnrealEngine.Runtime
                             flags |= EClassFlags.HasInstancedReference;
                         }
                     }
-                }
-
-                // Class needs to specify which ini file is going to be used if it contains config variables.
-                if (flags.HasFlag(EClassFlags.Config) && string.IsNullOrEmpty(classConfigName))
-                {
-                    classConfigName = "Engine"; // NAME_Engine is just "Engine"?
-                    throw new ValidateUnrealClassFailedException(type,
-                        "Classes with config / globalconfig member variables need to specify config file.");
                 }
 
                 additionalFlags |= ManagedUnrealTypeInfoFlags.HasLateResolvedClassFlags;
@@ -2179,6 +2188,27 @@ namespace UnrealEngine.Runtime
                 if (paramInfo.Flags.HasFlag(EPropertyFlags.OutParm))
                 {
                     functionInfo.Flags |= EFunctionFlags.HasOutParms;
+                }
+                if (parameter.IsOptional && parameter.DefaultValue != null)
+                {
+                    switch (paramInfo.Type.TypeCode)
+                    {
+                        case EPropertyType.Bool:
+                        case EPropertyType.Int8:
+                        case EPropertyType.Int16:
+                        case EPropertyType.Int:
+                        case EPropertyType.Int64:
+                        case EPropertyType.Byte:
+                        case EPropertyType.UInt16:
+                        case EPropertyType.UInt32:
+                        case EPropertyType.UInt64:
+                        case EPropertyType.Double:
+                        case EPropertyType.Float:
+                        case EPropertyType.Enum:
+                        case EPropertyType.Str:
+                            paramInfo.DefaultValue = parameter.DefaultValue.ToString();
+                            break;
+                    }
                 }
                 paramInfo.IsFunctionParam = true;
                 paramInfo.Name = parameter.Name;
@@ -2468,55 +2498,6 @@ namespace UnrealEngine.Runtime
                 AdditionalFlags ^= flag;
             }
         }
-
-        //private Dictionary<string, ManagedUnrealPropertyInfo> cachedPropertiesByName;
-        //private Dictionary<string, ManagedUnrealFunctionInfo> cachedFunctionsByName;
-        //private Dictionary<string, ManagedUnrealTypeInfoReference> cachedBaseTypesByPath;
-        //
-        //public Dictionary<string, ManagedUnrealPropertyInfo> GetPropertiesByName()
-        //{
-        //    if (cachedPropertiesByName != null && cachedPropertiesByName.Count == Properties.Count)
-        //    {
-        //        return cachedPropertiesByName;
-        //    }
-        //
-        //    cachedPropertiesByName = new Dictionary<string, ManagedUnrealPropertyInfo>();
-        //    foreach (ManagedUnrealPropertyInfo propertyInfo in Properties)
-        //    {
-        //        cachedPropertiesByName.Add(propertyInfo.Name, propertyInfo);
-        //    }
-        //    return cachedPropertiesByName;
-        //}
-        //
-        //public Dictionary<string, ManagedUnrealFunctionInfo> GetFunctionsByName()
-        //{
-        //    if (cachedFunctionsByName != null && cachedFunctionsByName.Count == Functions.Count)
-        //    {
-        //        return cachedFunctionsByName;
-        //    }
-        //
-        //    cachedFunctionsByName = new Dictionary<string, ManagedUnrealFunctionInfo>();
-        //    foreach (ManagedUnrealFunctionInfo functionInfo in Functions)
-        //    {
-        //        cachedFunctionsByName.Add(functionInfo.Name, functionInfo);
-        //    }
-        //    return cachedFunctionsByName;
-        //}
-        //
-        //public Dictionary<string, ManagedUnrealTypeInfoReference> GetBaseTypesByPath()
-        //{
-        //    if (cachedBaseTypesByPath != null && cachedBaseTypesByPath.Count == BaseTypes.Count)
-        //    {
-        //        return cachedBaseTypesByPath;
-        //    }
-        //
-        //    cachedBaseTypesByPath = new Dictionary<string, ManagedUnrealTypeInfoReference>();
-        //    foreach (ManagedUnrealTypeInfoReference baseTypeInfo in BaseTypes)
-        //    {
-        //        cachedBaseTypesByPath.Add(baseTypeInfo.Path, baseTypeInfo);
-        //    }
-        //    return cachedBaseTypesByPath;
-        //}
     }
 
     public partial class ManagedUnrealEnumInfo : ManagedUnrealTypeInfo
@@ -2553,6 +2534,11 @@ namespace UnrealEngine.Runtime
         public EPropertyFlags Flags { get; set; }
 
         public ManagedUnrealPropertyFlags AdditionalFlags { get; set; }
+
+        /// <summary>
+        /// TODO: Store in this in some meta data storage (this is for default values metadata "CPP_Default_YourPropName")
+        /// </summary>
+        public string DefaultValue { get; set; }
 
         // Hijacking the native access specifier flags, does this have any side effects?
         // - These access specifier values seem to be rarely used in native code (mostly code gen related)
@@ -2889,7 +2875,7 @@ namespace UnrealEngine.Runtime
         /// <summary>
         /// This is the equivalent of BlueprintImplementableEvent which states the implementation is defined in Blueprint
         /// </summary>
-        BlueprintImplemented = 0x00000008,
+        BlueprintImplementable = 0x00000008,
 
         /// <summary>
         /// States that this method is an "_Implementation" method (this is used as the suffix may be trimmed to remove the name)
@@ -2937,10 +2923,10 @@ namespace UnrealEngine.Runtime
             set { SetFlag(ManagedUnrealFunctionFlags.Override, value); }
         }
         [ManagedUnrealReflectIgnore]
-        public bool IsBlueprintImplemented
+        public bool IsBlueprintImplementable
         {
-            get { return AdditionalFlags.HasFlag(ManagedUnrealFunctionFlags.BlueprintImplemented); }
-            set { SetFlag(ManagedUnrealFunctionFlags.BlueprintImplemented, value); }
+            get { return AdditionalFlags.HasFlag(ManagedUnrealFunctionFlags.BlueprintImplementable); }
+            set { SetFlag(ManagedUnrealFunctionFlags.BlueprintImplementable, value); }
         }
         [ManagedUnrealReflectIgnore]
         public bool IsImplementation

@@ -49,10 +49,13 @@
 #include "Export_UGameInstance.h"
 #include "Export_ULevel.h"
 #include "Export_AActor.h"
+#include "Export_APlayerController.h"
+#include "Export_UActorComponent.h"
 #include "Export_USceneComponent.h"
 #include "Export_UMaterialInstanceDynamic.h"
 #include "Export_UEditorEngine.h"
 #include "Export_FEditorDelegates.h"
+#include "Export_UUserWidget.h"
 
 #include "Export_FURL.h"
 #include "Export_FWorldContext.h"
@@ -116,6 +119,22 @@
 #include "Export_FSlowTask.h"
 #include "Export_FFeedbackContext.h"
 
+#include "Export_FLatentActionManager.h"
+#include "Export_FLatentResponse.h"
+#include "Export_FUSharpLatentAction.h"
+#include "Export_UUSharpAsyncActionBase.h"
+#include "Export_UUSharpOnlineBlueprintCallProxyBase.h"
+#include "Export_UBlueprintAsyncActionBase.h"
+#include "Export_UOnlineBlueprintCallProxyBase.h"
+#include "Export_FGameplayResourceSet.h"
+#include "Export_UGameplayTask.h"
+#include "Export_UUSharpGameplayTask.h"
+#include "Export_IGameplayTaskOwnerInterface.h"
+
+#include "Export_FSubsystemCollection.h"
+#include "Export_UGameInstanceSubsystem.h"
+#include "Export_ULocalPlayerSubsystem.h"
+
 #include "Export_FKey.h"
 #include "Export_FInputBinding.h"
 #include "Export_FInputActionBinding.h"
@@ -132,6 +151,13 @@
 #include "Export_IConsoleVariable.h"
 #include "Export_IConsoleManager.h"
 
+#include "Export_FVariantData.h"
+#include "Export_FOnlineSession.h"
+#include "Export_FOnlineSessionSearchResult.h"
+#include "Export_FOnlineSessionSetting.h"
+#include "Export_FOnlineSessionSettings.h"
+#include "Export_FSessionUtils.h"
+
 #include "Export_GCHelper.h"
 #include "Export_FModulePaths.h"
 #include "Export_SizeOfStruct.h"
@@ -139,6 +165,7 @@
 #include "Export_SharpHotReloadUtils.h"
 #include "Export_USharpClass.h"
 #include "Export_USharpStruct.h"
+#include "Export_USharpSettings.h"
 #include "Export_Classes.h"
 #include "Export_VTableHacks.h"
 
@@ -192,10 +219,13 @@ CSEXPORT void CSCONV RegisterFunctions(RegisterFunc registerFunc)
 	Export_UGameInstance(registerFunc);
 	Export_ULevel(registerFunc);
 	Export_AActor(registerFunc);
+	Export_APlayerController(registerFunc);
+	Export_UActorComponent(registerFunc);
 	Export_USceneComponent(registerFunc);
 	Export_UMaterialInstanceDynamic(registerFunc);
 	Export_UEditorEngine(registerFunc);
 	Export_FEditorDelegates(registerFunc);
+	Export_UUserWidget(registerFunc);
 
 	Export_FURL(registerFunc);
 	Export_FWorldContext(registerFunc);
@@ -259,6 +289,22 @@ CSEXPORT void CSCONV RegisterFunctions(RegisterFunc registerFunc)
 	Export_FSlowTask(registerFunc);
 	Export_FFeedbackContext(registerFunc);
 	
+	Export_FLatentActionManager(registerFunc);
+	Export_FLatentResponse(registerFunc);
+	Export_FUSharpLatentAction(registerFunc);
+	Export_UUSharpAsyncActionBase(registerFunc);
+	Export_UUSharpOnlineBlueprintCallProxyBase(registerFunc);
+	Export_UBlueprintAsyncActionBase(registerFunc);
+	Export_UOnlineBlueprintCallProxyBase(registerFunc);
+	Export_FGameplayResourceSet(registerFunc);
+	Export_UGameplayTask(registerFunc);
+	Export_UUSharpGameplayTask(registerFunc);
+	Export_IGameplayTaskOwnerInterface(registerFunc);
+
+	Export_FSubsystemCollection(registerFunc);
+	Export_UGameInstanceSubsystem(registerFunc);
+	Export_ULocalPlayerSubsystem(registerFunc);
+
 	Export_FKey(registerFunc);
 	Export_FInputBinding(registerFunc);
 	Export_FInputActionBinding(registerFunc);
@@ -275,6 +321,13 @@ CSEXPORT void CSCONV RegisterFunctions(RegisterFunc registerFunc)
 	Export_IConsoleVariable(registerFunc);
 	Export_IConsoleManager(registerFunc);
 	
+	Export_FVariantData(registerFunc);
+	Export_FOnlineSession(registerFunc);
+	Export_FOnlineSessionSearchResult(registerFunc);
+	Export_FOnlineSessionSetting(registerFunc);
+	Export_FOnlineSessionSettings(registerFunc);
+	Export_FSessionUtils(registerFunc);
+	
 	Export_GCHelper(registerFunc);
 	Export_FModulePaths(registerFunc);
 	Export_SizeOfStruct(registerFunc);
@@ -282,6 +335,7 @@ CSEXPORT void CSCONV RegisterFunctions(RegisterFunc registerFunc)
 	Export_SharpHotReloadUtils(registerFunc);
 	Export_USharpClass(registerFunc);
 	Export_USharpStruct(registerFunc);
+	Export_USharpSettings(registerFunc);
 	Export_Classes(registerFunc);
 	Export_VTableHacks(registerFunc);
 }

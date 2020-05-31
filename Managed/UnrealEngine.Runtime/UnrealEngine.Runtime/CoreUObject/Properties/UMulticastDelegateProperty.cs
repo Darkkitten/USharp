@@ -6,10 +6,20 @@ using UnrealEngine.Runtime.Native;
 
 namespace UnrealEngine.Runtime
 {
+    [UClass(Flags = (ClassFlags)0x10400080), UMetaPath("/Script/CoreUObject.MulticastInlineDelegateProperty")]
+    public class UMulticastInlineDelegateProperty : UMulticastDelegateProperty
+    {
+    }
+
+    [UClass(Flags = (ClassFlags)0x10400080), UMetaPath("/Script/CoreUObject.MulticastSparseDelegateProperty")]
+    public class UMulticastSparseDelegateProperty : UMulticastDelegateProperty
+    {
+    }
+
     /// <summary>
     /// Describes a pointer to a function bound to an Object.
     /// </summary>
-    [UMetaPath("/Script/CoreUObject.MulticastDelegateProperty", "CoreUObject", UnrealModuleType.Engine)]
+    [UClass(Flags = (ClassFlags)0x10400080), UMetaPath("/Script/CoreUObject.MulticastDelegateProperty")]
     public class UMulticastDelegateProperty : UProperty
     {
         public override EPropertyType PropertyType
